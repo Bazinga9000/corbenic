@@ -1,0 +1,53 @@
+cabal-version:   3.0
+name:            corbenic-lang
+version:         0.1.0.0
+license:         MIT
+author:          Bazinga_9000
+maintainer:      bazninethousand@gmail.com
+build-type:      Simple
+
+flag dev
+  description: Be less pedantic for rapid rebuilds
+  default: False
+  manual: True
+
+common shared-config
+    default-language: GHC2024
+    if !flag(dev)
+      ghc-options: -Wall -Wcompat -Wincomplete-record-updates -Wincomplete-uni-patterns -Wpartial-fields -Wredundant-constraints -Wmissing-home-modules -Widentities -Werror
+    default-extensions:
+        OverloadedStrings
+        TemplateHaskell
+        TypeFamilies
+        PatternSynonyms
+        ViewPatterns
+    build-depends:
+        base >= 4.14 && < 5,
+        relude,
+        text,
+        lens,
+        QuickCheck
+    mixins:
+        base hiding (Prelude)
+
+library
+    import:           shared-config
+    hs-source-dirs:   src
+    build-tool-depends: alex:alex >= 3.2
+                      , happy:happy >= 1.20
+    build-depends:    array
+                    , mtl
+                    , containers
+                    , corbenic-prelude
+
+test-suite test-corbenic
+    import:           shared-config
+    type:             exitcode-stdio-1.0
+    main-is:          Tests.hs
+    hs-source-dirs:   test
+    build-depends:    corbenic-lang
+                    , corbenic-prelude
+                    , tasty
+                    , tasty-hunit
+                    , tasty-quickcheck
+                    , containers
