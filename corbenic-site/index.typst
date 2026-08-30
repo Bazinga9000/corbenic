@@ -1,1 +1,80 @@
-Hello, world!
+Corbenic is a glyph-based lazy, call-by-need, purely functional programming language.
+
+_note_: Corbenic is very early in development and this site and page will be pretty at some point, but for now, it's just going to serve as a single-page spec. This specification assumes familiarity with Haskell, as much of the language's design is derived from Haskell.
+
+The repository for Corbenic is on #link("https://github.com/Bazinga9000/corbenic")[GitHub].
+
+The recommended font for Corbenic code is Fairfax HD, which can be acquired #link("https://www.kreativekorp.com/software/fonts/fairfaxhd/")[here].
+
+= Identifiers
+
+In Corbenic, most predefined functions and operators are single Unicode glyphs. To allow whitespace to be omitted wherever feasible, there are several rules for what will constitute a single identifier.
+
+- An identifier can *never* contain a reserved character under any circumstances. These characters are treated specially by the lexer and parser.
+- An identifier can consist of *any* string of non-reserved non-quoting characters surrounded by a pair of *quoting characters*. Most quoting brackets have specific purposes, and all quoting brackets are reserved:
+  - The ornate brackets `﴾` and `﴿` are used to refer to identifiers that are Corbenic primitives. Defining your own is not permitted, and which primitives are avaliable will depend on the backend of choice (though most will be avaliable everywhere). Note that these make meaningfully different identifiers: `﴾x﴿` and `x` are not the same.
+    - Example: `﴾+ℤℤ﴿`, the primitive for addition of integers.
+  - The angle brackets `〈` and `〉 ` are used to mark that an identifier is a *type variable* for use in type applications.
+    - Example: `〈ℕ〉`, for type application of the type of natural numbers.
+  - Guillemets `«` and `» ` are used for two general purposes:
+    - To explicitly mark that the containing characters should be treated as a single identifier.
+      - Example: `«+++»` is a single identifier, `+++` is a sequence of three instances of `+` (and will fail at parse time).
+      - Note that unlike the ornate brackets, guillemets do not create new identifiers. `«+»` is the same as the `+` in the Prelude, and is the intended means to access Prelude's addition as a value.
+    - To use an identifier that has been declared with fixity as a standard value.
+      - Example: `2 + 4` uses `+` infix, `«+» 2 4` is semantically identical but uses `+` as a standard function.
+- An identifier can consist of a *capital* letter (among the twenty-six Latin letters) in a given class followed by any number of letters in that same class. The classes are standard Latin letters alongside the various modifications present in the Unicode block Mathematical Alphanumeric Symbols.
+  - `Monoid`, `HasComplexUnit`, `ℕ`, `𝕆𝕟`, and `𝖃𝖞𝖟` are all single identifiers. `𝕆𝕟𝖃𝖞𝖟` is two, since the letters do not come from the same class.
+- Unicode characters considered "space" characters (` `, ZWSP, etc) are not legal in identifiers unless quoted (though they are not reserved). These characters terminate identifiers, but they are otherwise insignificant.
+- Certain characters cannot stand as identifiers by themselves, but can be suffixed to an identifier to produce another identifier:
+  - Exactly one instance of `⌞` or `⌟`. These are commonly used where suffixing `l` or `r` would be done in Haskell. `x⌟` is one identifier.
+  - Any sequence of subscripted digits (`₀₁₂₃₄₅₆₇₈₉`) that does not begin with a leading `₀`. These subscripted digits are Corbenic's way to get numbers into identifier names when they're genuinely useful: `SHA₂₅₆` is one identifier naming SHA-256, and operations on Bifunctors are often defined with the same glyphs as the corresponding operations on Functors suffixed with `₂`.
+  - Any of the prime characters: `′`, `″`, `‴`, `‵`, `‶`, `‷`
+  - The subscript infinity `͚`.
+  - The complement symbol `∁` (commonly seen in operations involving contravariant functors)
+- Characters used for quoting literals are reserved. These are `'` for character literals, `"` for text literals, and `[` and `]` for list terms and types.
+- Parentheses `(` and `)` are reserved (for grouping).
+- The character `⍝` is used to begin comments and is thus reserved.
+- Digits `0123456789` are reserved for numeric literals.
+- Any single non-reserved character not covered by these rules is an identifier.
+  - Examples: `+`, `π`, and `ꙮ`, `f+`, and `xyz` are all sequences of one-character identifiers.
+
+= Declarations
+
+Corbenic has multiple types of declarations. To distinguish between declarations, different binding symbols are used.
+
+- *Term declarations* are made using the `≔` symbol, which is reserved. `x ≔ 2` is a term declaration.
+- *Type annotations* are written using the reserved symbol `⠛`. A type annotation for a declaration must be on the line immediately preceeding the declaration: `x ⠛ ℤ` on its own line, then `x ≔ …` below. Within a type expression itself, `⠛` is used infix as usual (`⦿⌟₆ + ⠛ x → x → x`), and constraint notation (`x ⋹ Additive ⇒ …`) may appear anywhere a type can.
+- *Typeclass declarations* are made using the symbol `⇒`.
+  - Constraints can be written in a standard form, such as `(Functor x, Foldable x) ⇒ Traversable x`, or they can be written in a set-algebra like form, as follows: `x ⋹ Functor ⋒ Foldable`.
+  - Typeclasses with no constraints are declared with nothing before `⇒`. For example, `⇒ Magma x` on its own line is a legal typeclass definition.
+  - Multiparameter typeclasses can also be declared using the set notation, put each parameter before the `⋹`, like so: `x y ⋹ Convertible`
+  - Set notation is also valid inside standard tuple notation to declare multiple constraints at once and still allow compression of common types, like so: `(x ⋹ Foo ⋒ Bar, y ⋹ Baz)`
+  - Typeclass methods are declared in a block immediately following the declaration.
+- *Constraint aliases* are declared with the reserved symbol `≣`. These are methodless typeclasses which are aliases for a set of constraints and should be used only when there is no law associated with the class beyond merely satisfying the constraints.
+  - Example: Since the typeclass `Group` demands only that its members are `Associative`, `Unital`, and `Invertible`, we define it like so: `a ⋹ Group ≣ a ⋹ Associative ⋒ Unital ⋒ Invertible`. However, `Associative` itself, despite having no methods beyond its constituent `Magma`, demands an additional law (associativity) and hence it must be declared explicitly using `⇒`, like so: `a ⋹ Magma ⇒ a ⋹ Associative`. Note the reversal of order in the two cases.
+- *Type aliases* are declared with the reserved symbol `≘`. This corresponds to the `type` operator in Haskell and is a transparent expansion.
+- *General ADT Declarations* are done using the reserved symbol `≗`. Constructors are separated by the reserved character `¦`. An example declaration is the Rose tree: `Rose a ≗ Leaf a ¦ Tree [Rose a]`
+- *Newtypes* are declared with the reserved symbol `≛`. An example declaration is the Identity monad: `Identity a ≛ Identity a`
+- *Fixity Declarations* work differently from how they work in Haskell. In Corbenic, a fixity declaration is attached to the binding at declaration, and this is the only way to declare fixities. To declare fixity, prepend the name in the declaration with the reserved symbol `⦿` (which is the fixity declarator), followed by one of the following:
+  - For *right-associative binary operators*, add `⌟` followed by the precedence as a *subscripted* number.
+  - For *left-associative binary operators*, add `⌞` followed by the precedence, again as a subscripted number.
+  - For *non-associative binary operators*, add only the precedence, again as a subscripted number.
+  - For *prefixed unary operators*, add `⟓`. These do not need precedence and bind more tightly than all binary operators.
+  - Other than being a natural number, there is no restriction on precedence level, though it is recommended for most users to keep their precedences in the range zero to nine unless there is a pressing reason to do otherwise.
+
+The following are the full definitions of the `Additive` and `Multiplicative` typeclasses to demonstrate the various declaration features:
+```
+⇒ Additive x
+  ⦿⌟₆ + ⠛ x → x → x
+  ⓪ ⠛ x
+
+⇒ Multiplicative x
+  ⦿⌟₅ * ⠛ x → x → x
+  ① ⠛ x
+```
+
+Note that if you inspect the type of `+` in the REPL with `:i +`, you will see its type and fixity as `⦿⌟₆ + ⠛ x ⋹ Additive ⇒ x → x → x`. The implicit constraint is made explicit.
+
+= Blocks
+
+Blocks in Corbenic are delineated by indentation. Exactly *two* spaces at the beginning of a line mark one indentation block.

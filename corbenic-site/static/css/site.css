@@ -1,0 +1,28 @@
+@font-face {
+    font-family: "Constructium";
+    src: url("/fonts/Constructium.ttf") format("truetype");
+}
+
+@font-face {
+    font-family: "FairfaxHD";
+    src: url("/fonts/FairfaxHD.ttf") format("truetype");
+}
+
+html {
+    font-family: "Constructium", serif;
+    font-size: 16px;
+}
+
+code, pre, kbd, samp {
+    font-family: "FairfaxHD", monospace;
+}
+
+body {
+    max-width: 50rem;
+    margin: 0 auto;
+    padding: 1rem;
+}
+header nav a {
+    text-decoration: none;
+    font-weight: bold;
+}
