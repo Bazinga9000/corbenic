@@ -7,6 +7,7 @@ import qualified Data.Text.Lazy as TL
 import qualified Data.Text.Lazy.Encoding as TLE
 import           Control.Monad (unless)
 import           Data.Maybe (fromMaybe)
+import           GHC.IO.Encoding (setLocaleEncoding, utf8)
 
 --------------------------------------------------------------------------------
 -- Configuration
@@ -57,18 +58,25 @@ extractBetween open close s = do
 --------------------------------------------------------------------------------
 
 main :: IO ()
-main = config >>= \cfg -> hakyllWith cfg $ do
-    match "static/**" $ do
-        route   (gsubRoute "static/" (const ""))
-        compile copyFileCompiler
+main = do
+    -- Hakyll writes files via String I/O, which uses the locale encoding.
+    -- In the nix build there is no locale (POSIX/ASCII), so any non-ASCII
+    -- character (e.g. typst's smartened quotes, U+2019) crashes commitBuffer.
+    -- Force UTF-8 for all Handle I/O regardless of environment.
+    setLocaleEncoding utf8
+    cfg <- config
+    hakyllWith cfg $ do
+        match "static/**" $ do
+            route   (gsubRoute "static/" (const ""))
+            compile copyFileCompiler
 
-    match "*.typst" $ do
-        route $ setExtension "html"
-        compile $ typstCompiler
-            >>= loadAndApplyTemplate "templates/default.html" siteCtx
-            >>= relativizeUrls
+        match "*.typst" $ do
+            route $ setExtension "html"
+            compile $ typstCompiler
+                >>= loadAndApplyTemplate "templates/default.html" siteCtx
+                >>= relativizeUrls
 
-    match "templates/*" $ compile templateBodyCompiler
+        match "templates/*" $ compile templateBodyCompiler
 
 --------------------------------------------------------------------------------
 -- Contexts
