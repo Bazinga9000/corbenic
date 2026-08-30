@@ -30,6 +30,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - uses: DeterminateSystems/nix-installer-action@main
+      - uses: DeterminateSystems/magic-nix-cache-action@main
       - id: list
         run: |
           SYSTEM="${{ inputs.system }}"
@@ -48,11 +49,9 @@ jobs:
           EXCLUDES=$(jq -R -s -c \
             'split("\n") | map(gsub("\\s*#.*$"; "") | gsub("^\\s+|\\s+$"; "")) | map(select(length > 0)) | map({package: .})' \
             <<< "${{ inputs.exclude }}")
-          {
-            echo "system=$SYSTEM"
-            echo "packages=$PACKAGES"
-            echo "excludes=$EXCLUDES"
-          } >> "$GITHUB_OUTPUT"
+          echo "system=$SYSTEM" >> "$GITHUB_OUTPUT"
+          echo "packages=$PACKAGES" >> "$GITHUB_OUTPUT"
+          echo "excludes=$EXCLUDES" >> "$GITHUB_OUTPUT"
 
   build:
     needs: discover
@@ -68,3 +67,17 @@ jobs:
       - uses: DeterminateSystems/magic-nix-cache-action@main
       - name: Build ${{ matrix.package }}
         run: nix build ".#packages.${{ needs.discover.outputs.system }}.${{ matrix.package }}"
+  passed:
+    name: Nix CI passed
+    if: ${{ always() }}
+    needs:
+      - discover
+      - build
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check results
+        run: |
+          if [[ "${{ needs.discover.result }}" != "success" ||
+                "${{ needs.build.result }}" != "success" ]]; then
+            exit 1
+          fi
