@@ -1,7 +1,7 @@
-module Prelude
-  ( module Relude,
+module Prelude (
+    module Relude,
     module Relude.Extra.Bifunctor,
-  )
+)
 where
 
 import Relude

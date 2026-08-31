@@ -1,0 +1,13 @@
+{
+  "languages": {
+    "Haskell": {
+      "format_on_save": "on",
+      "formatter": {
+        "external": {
+          "command": "fourmolu",
+          "arguments": ["--stdin-input-file", "{ZED_FILE_PATH}"]
+        }
+      }
+    }
+  }
+}
