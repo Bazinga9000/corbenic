@@ -35,3 +35,4 @@ library
     hs-source-dirs:   src
     build-depends:    relude
     exposed-modules:  Prelude
+    other-modules:    Prelude.Pretty
