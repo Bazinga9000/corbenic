@@ -79,3 +79,7 @@ Note that if you inspect the type of `+` in the REPL with `:i +`, you will see i
 = Blocks
 
 Blocks in Corbenic are delineated by indentation. Exactly *two* spaces at the beginning of a line mark one indentation block.
+
+= Comments
+
+In Corbenic, comments begin with the character `⍝`. If a comment begins with two copies of this character, `⍝⍝`, it is a *documentation comment*. Documentation comments in the Prelude will be rendered on this site alongside the declarations of the various types and classes in Prelude. A documentation comment must immediately precede its declaration, or begin the module (for a module-wide comment). A mid-line documentation comment is a warning.
