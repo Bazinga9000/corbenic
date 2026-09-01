@@ -33,18 +33,31 @@ common shared-config
 library
     import:           shared-config
     hs-source-dirs:   src
-    build-tool-depends: alex:alex >= 3.2
-                      , happy:happy >= 1.20
     build-depends:    array
+                    , ansi-terminal
                     , mtl
                     , containers
                     , corbenic-prelude
+    exposed-modules:   Frontend.Diagnostics
+                     , Frontend.Lexer
+                     , Frontend.Lexer.Tokenizers
+                     , Frontend.Lexer.Types
+                     , Frontend.IOPipeline
+                     , Syntax.Chars
+                     , Syntax.Documentation
+                     , Syntax.Fixity
+                     , Syntax.Identifier
+                     , Syntax.Literal
+                     , Syntax.Location
+                     , Syntax.Token
+
 
 test-suite test-corbenic
     import:           shared-config
     type:             exitcode-stdio-1.0
     main-is:          Tests.hs
     hs-source-dirs:   test
+    other-modules:    Tests.Lexer
     build-depends:    corbenic-lang
                     , corbenic-prelude
                     , tasty
