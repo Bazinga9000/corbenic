@@ -1,3 +1,41 @@
+:root {
+  /* Terracotta dark theme */
+  --base00: #241d1a;
+  --base01: #362b27;
+  --base02: #473933;
+  --base03: #594740;
+  --base04: #a78e84;
+  --base05: #b8a59d;
+  --base06: #cabbb5;
+  --base07: #dcd2ce;
+  --base08: #f6998f;
+  --base09: #ffa888;
+  --base0a: #ffc37a;
+  --base0b: #b6c68a;
+  --base0c: #c0bcdb;
+  --base0d: #b0a4c3;
+  --base0e: #d8a2b0;
+  --base0f: #f1ae97;
+
+  --background: var(--base00);
+  --background-alt: var(--base01);
+  --selection: var(--base02);
+  --comment: var(--base03);
+  --foreground-muted: var(--base04);
+  --foreground: var(--base05);
+  --foreground-bright: var(--base06);
+  --foreground-brighter: var(--base07);
+  --red: var(--base08);
+  --orange: var(--base09);
+  --yellow: var(--base0a);
+  --green: var(--base0b);
+  --cyan: var(--base0c);
+  --blue: var(--base0d);
+  --purple: var(--base0e);
+  --brown: var(--base0f);
+}
+
+
 @font-face {
     font-family: "Constructium";
     src: url("/fonts/Constructium.ttf") format("truetype");
@@ -21,8 +59,15 @@ body {
     max-width: 50rem;
     margin: 0 auto;
     padding: 1rem;
+    background: var(--background);
+    color: var(--foreground);
 }
+
 header nav a {
     text-decoration: none;
     font-weight: bold;
+}
+
+a {
+  color: var(--blue);
 }
