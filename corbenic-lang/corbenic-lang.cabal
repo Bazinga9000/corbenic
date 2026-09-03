@@ -50,6 +50,7 @@ library
                      , Syntax.Literal
                      , Syntax.Location
                      , Syntax.Token
+                     , Syntax.Surface
 
 
 test-suite test-corbenic

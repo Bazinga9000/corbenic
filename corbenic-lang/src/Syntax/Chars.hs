@@ -24,6 +24,8 @@ reservedTokens =
         , (',', TokComma)
         , ('≔', TokTermDecl)
         , ('⠛', TokHasType)
+        , ('∀', TokForAll)
+        , ('∃', TokExists)
         , ('≣', TokConstraintAlias)
         , ('≘', TokTypeAlias)
         , ('≛', TokNewtype)
@@ -32,6 +34,13 @@ reservedTokens =
         , ('⇒', TokTypeclassImplies)
         , ('⋒', TokTypeclassIntersect)
         , ('⋹', TokTypeclassElement)
+        , ('λ', TokLambda)
+        , ('Λ', TokTypeLambda)
+        , ('↦', TokMapsTo)
+        , ('🝡', TokCase)
+        , ('🝣', TokDo)
+        , ('↤', TokDoMonadic)
+        , ('※', TokNoExport)
         ]
 
 -- handled specifically by the lexer

@@ -28,6 +28,9 @@ data Token
       TokTermDecl
     | TokHasType
     | TokFixityDecl Fixity
+    | -- type declaration tokens
+      TokForAll
+    | TokExists
     | -- type declarations
       TokConstraintAlias
     | TokTypeAlias
@@ -38,6 +41,14 @@ data Token
       TokTypeclassImplies
     | TokTypeclassIntersect
     | TokTypeclassElement
+    | -- syntactic structure
+      TokLambda
+    | TokTypeLambda
+    | TokMapsTo
+    | TokCase
+    | TokDo
+    | TokDoMonadic
+    | TokNoExport
     | -- EOF
       TokEOF
     deriving (Eq, Show)
@@ -59,6 +70,8 @@ instance Pretty Token where
     prettyPrint (TokDocComment t) = "⍝⍝ " <> t
     prettyPrint TokTermDecl = "≔"
     prettyPrint TokHasType = "⠛"
+    prettyPrint TokForAll = "∀"
+    prettyPrint TokExists = "∃"
     prettyPrint TokConstraintAlias = "≣"
     prettyPrint TokTypeAlias = "≘"
     prettyPrint TokNewtype = "≛"
@@ -67,4 +80,11 @@ instance Pretty Token where
     prettyPrint TokTypeclassImplies = "⇒"
     prettyPrint TokTypeclassIntersect = "⋒"
     prettyPrint TokTypeclassElement = "⋹"
+    prettyPrint TokLambda = "λ"
+    prettyPrint TokTypeLambda = "Λ"
+    prettyPrint TokMapsTo = "↦"
+    prettyPrint TokCase = "🝡"
+    prettyPrint TokDo = "🝣"
+    prettyPrint TokDoMonadic = "↤"
+    prettyPrint TokNoExport = "※"
     prettyPrint TokEOF = "⌿"

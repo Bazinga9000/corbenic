@@ -11,6 +11,9 @@ data Identifier
     | IdentGenerated Natural -- internally-generated identifiers
     deriving (Show)
 
+-- | A Corbenic identifier, with an **annotation**
+data AnnotatedIdent ann = AnnotatedIdent ann Identifier
+
 instance Eq Identifier where
     -- raw and quoted identifiers are the same
     IdentRaw a == IdentQuoted b = a == b

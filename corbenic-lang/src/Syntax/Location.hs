@@ -21,7 +21,7 @@ data Span = Span
     }
     deriving (Eq, Show, Ord)
 
--- | A node tagged with its source span and a stage-specific annotation.
+-- | A node tagged with its source span
 data Located a = Located
     { locSpan :: Span
     , locAnn :: a
