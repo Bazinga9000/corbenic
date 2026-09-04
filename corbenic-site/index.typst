@@ -6,6 +6,38 @@ The repository for Corbenic is on #link("https://github.com/Bazinga9000/corbenic
 
 The recommended font for Corbenic code is Fairfax HD, which can be acquired #link("https://www.kreativekorp.com/software/fonts/fairfaxhd/")[here].
 
+= Philosophy of Corbenic
+
+== Glyphs Should Do One Specific Thing As Generally As Possible
+
+This sounds oxymoronic, but hear me out.
+
+In Haskell, there's a composition operator `(.)`. It has type `(b → c) → (a → b) → a → c`. You use it to apply one function to the result of another.
+
+Corbenic *also* has a composition operator, it's called `«∘»`. However, if you investigate the type of `«∘»`, what you will find is not the same:
+
+```
+«∘» ⠛ Semigroupoid c ⇒ c t₂ t₃ → c t₁ t₂ → c t₁ t₃
+```
+
+This is *much* more abstract, but if you dig into the category theory, it is indeed simply a generalization of Haskell's operator! `Semigroupoid` is the class of types that support an associative composition in this way, so why not? Why shouldn't the "fundamental" glyph do both?
+
+However, there are times when glyphs do need to be genuinely different, because they're doing genuinely different things. Haskell uses the `type` keyword for both type aliases and constraint aliases. Yes, constraints *are* types, but saying "something *being considered* a group means it is associative unital monoid" is not the same as saying "a Foo *is* a Bar". So Corbenic uses two different glyphs to declare each.
+
+== Unicode is a Vast Banquet and We Would Be Fools to Not Partake Of It
+
+Things in the Prelude will generally get their own glyphs (if there's some glyph which can be at least somewhat non-arbitrarily be assigned to it and it isn't a typeclass, since those are best left spelled).
+
+Unicode has over a hundred thousand characters, so we will never run out (even if we limit ourselves to symbols, at first). We have reserved some characters as suffixes so related-but-not-the-same things can be named similarly, so we will be able to keep the language terse yet still very expressive, which leads us to....
+
+== Keep Your Head In The Clouds And Your Feet On The Ground
+
+In some circles, functional programming langauges have an undeserved reputation for being overly academic ivory towers that aren't used to do anything productive (if you don't believe me that this reputation is undeserved, look into how many places use Haskell or OCaml when correctness starts to *really* matter...). If you were to ask Corbenic whether it thinks the abstractions seen in advanced functional programming are a bit too much, Corbenic (or perhaps more accurately the Roi Méhaigné) would reply "Of course not! I love abstract nonsense!"
+
+As such, the Prelude is chock full of such abstractions in the hope that someone might find them useful one day, even if only to golf down a few characters. The language itself will also slowly gain more type level wizardry over time (as fast as the writer can implement it...)
+
+That being said, abstractions are only useful if you have things to use them on, so the Prelude will also try to be full of generally useful machinery that many languages delegate to external dependencies. Furthermore, the link between the cloud and the ground should be maximally strong: If you find that something in the Prelude should have a `Profunctor` or `Comonad` or `CommutativeRing` instance and it doesn't, that's a bug, and you should tell me about it!
+
 = Identifiers
 
 In Corbenic, most predefined functions and operators are single Unicode glyphs. To allow whitespace to be omitted wherever feasible, there are several rules for what will constitute a single identifier.
