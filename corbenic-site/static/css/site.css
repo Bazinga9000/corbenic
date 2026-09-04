@@ -48,11 +48,38 @@
 
 html {
     font-family: "Constructium", serif;
-    font-size: 16px;
+    font-size: 18px;
 }
 
 code, pre, kbd, samp {
     font-family: "FairfaxHD", monospace;
+}
+
+/* Inline code */
+code {
+    background: var(--background-alt);
+    border: 1px solid var(--base02);
+    border-radius: 0.25rem;
+    padding: 0.1em 0.35em;
+    font-size: 0.9em;
+}
+
+/* Code boxes (block-level code) */
+pre {
+    background: var(--background-alt);
+    border: 1px solid var(--base02);
+    border-radius: 0.5rem;
+    padding: 1rem;
+    overflow-x: auto;
+    line-height: 1.8;
+}
+
+pre code {
+    background: none;
+    border: none;
+    border-radius: 0;
+    padding: 0;
+    font-size: 1em;
 }
 
 body {
@@ -61,6 +88,7 @@ body {
     padding: 1rem;
     background: var(--background);
     color: var(--foreground);
+    line-height: 1.6;
 }
 
 header nav a {
