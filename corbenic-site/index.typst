@@ -110,7 +110,53 @@ Note that if you inspect the type of `+` in the REPL with `:i +`, you will see i
 
 = Blocks
 
-Blocks in Corbenic are delineated by indentation. Exactly *two* spaces at the beginning of a line mark one indentation block.
+Blocks in Corbenic are delineated by indentation. Exactly *two* spaces at the beginning of a line mark one indentation block. Corbenic uses blocks in several ways:
+
+== Pattern Matching - `🝡` Blocks
+
+The `🝡` glyph is used to begin a pattern matching context. This is as most functional programming languages, with the expected glyphification:
+
+```
+«factorial» ⠛ ℕ → ℕ
+«factorial» x ≔ 🝡x
+  0 ↦ 1
+  n ↦ n * «factorial» (n ∸ 1) ⍝ ∸ "monus" is subtraction but if a > b then b ∸ a is 0
+```
+
+Corbenic also supports using seqeuence `λ🝡` to represent a lambda expression that immediately pattern matches on its argument:
+
+```
+«factorial» ≔ λ🝡
+  0 ↦ 1
+  n ↦ n * «factorial» (n ∸ 1)
+```
+
+== Do Notation - `🝣` Blocks
+
+Like Haskell, Corbenic has a form of do notation as syntactic sugar for monadic computations:
+
+```
+🝣
+  x ↤ «foo»
+  y ≔ bar
+  «doSomethingMonadic» x y
+  ☉ z     ⍝ on Applicatives, ☉ is Haskell's "pure"
+```
+
+== Typeclass Blocks
+
+Both the declaration of a typeclass and its instances are followed with all relevant methods in a block after the declaration (see the `Additive` and `Multiplicative` examples above)
+
+== Local Binding - Unmarked Blocks
+
+A block in any other context is Corbenic's method of scoped binding (like `let` or `where`). This is the only method of doing such a bind:
+
+```
+«foo» a b c ≔ «bar» x y z
+  x ≔ «baz» a b
+  y ≔ «quux» b c
+  z ≔ «fingore» x y ⍝ local bindings can refer to each other!
+```
 
 = Comments
 
