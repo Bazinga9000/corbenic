@@ -46,9 +46,9 @@ In Corbenic, most predefined functions and operators are single Unicode glyphs. 
 - An identifier can consist of *any* string of non-reserved non-quoting characters surrounded by a pair of *quoting characters*. Most quoting brackets have specific purposes, and all quoting brackets are reserved:
   - The ornate brackets `﴾` and `﴿` are used to refer to identifiers that are Corbenic primitives. Defining your own is not permitted, and which primitives are avaliable will depend on the backend of choice (though most will be avaliable everywhere). Note that these make meaningfully different identifiers: `﴾x﴿` and `x` are not the same.
     - Example: `﴾+ℤℤ﴿`, the primitive for addition of integers.
-  - The angle brackets `〈` and `〉 ` are used to mark that an identifier is a *type variable* for use in type applications.
+  - The angle brackets `〈` and `〉` are used to mark that an identifier is a *type variable* for use in type applications.
     - Example: `〈ℕ〉`, for type application of the type of natural numbers.
-  - Guillemets `«` and `» ` are used for two general purposes:
+  - Guillemets `«` and `»` are used for two general purposes:
     - To explicitly mark that the containing characters should be treated as a single identifier.
       - Example: `«+++»` is a single identifier, `+++` is a sequence of three instances of `+` (and will fail at parse time).
       - Note that unlike the ornate brackets, guillemets do not create new identifiers. `«+»` is the same as the `+` in the Prelude, and is the intended means to access Prelude's addition as a value.
@@ -59,7 +59,7 @@ In Corbenic, most predefined functions and operators are single Unicode glyphs. 
 - Unicode characters considered "space" characters (` `, ZWSP, etc) are not legal in identifiers unless quoted (though they are not reserved). These characters terminate identifiers, but they are otherwise insignificant.
 - Certain characters cannot stand as identifiers by themselves, but can be suffixed to an identifier to produce another identifier:
   - Exactly one instance of `⌞` or `⌟`. These are commonly used where suffixing `l` or `r` would be done in Haskell. `x⌟` is one identifier.
-  - Any sequence of subscripted digits (`₀₁₂₃₄₅₆₇₈₉`) that does not begin with a leading `₀`, *except* that a lone `₀` is legal. These subscripted digits are Corbenic's way to get numbers into identifier names when they're genuinely useful: `SHA₂₅₆` is one identifier naming SHA-256, and operations on Bifunctors are often defined with the same glyphs as the corresponding operations on Functors suffixed with `₂`.
+  - Any sequence of subscripted digits (`₀₁₂₃₄₅₆₇₈₉`) that does not begin with a leading `₀`, *except* that a lone `₀` is legal. These subscripted digits are Corbenic's way to get numbers into identifier names when they're genuinely useful: `SHA₂₅₆` is one identifier naming SHA-256, and operations on `Bifunctor`s are often defined with the same glyphs as the corresponding operations on Functors suffixed with `₂`.
   - Any of the prime characters: `′`, `″`, `‴`, `‵`, `‶`, `‷`
   - The subscript infinity `͚`.
   - The superscript plus and minus `⁺` and `⁻`

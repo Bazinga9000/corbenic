@@ -20,7 +20,7 @@ data MaybeExported thing ann = Exported (thing ann) | Hidden (thing ann)
 data SurfaceExpr ann
     = SELiteral ann Literal -- 2
     | SEIdentifier (AnnotatedIdent ann) -- x
-    | SELambda ann (AnnotatedIdent ann) (SurfaceExpr ann) -- λx → foo
+    | SELambda ann (AnnotatedIdent ann) (SurfaceExpr ann) -- λx ↦ foo
     | SEApp ann (SurfaceExpr ann) (SurfaceExpr ann) -- f x
     | SETypeLambda ann (AnnotatedIdent ann) (SurfaceExpr ann) -- Λx ↦ foo
     | SETypeApp ann (SurfaceExpr ann) (SurfaceType ann) -- f 〈x〉
