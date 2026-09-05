@@ -8,8 +8,7 @@ on:
 
 permissions:
   contents: read
-  pages: write
-  id-token: write
+  actions: read
 
 concurrency:
   group: ci-${{ github.ref }}
@@ -17,7 +16,7 @@ concurrency:
 
 jobs:
   nix:
-    uses: ./.github/workflows/nix-ci.yaml
+    uses: Bazinga9000/chashmal/.github/workflows/nix-ci.yaml@main
     with:
       # Skip redundant deps of the site-dist
       exclude: |
@@ -28,6 +27,11 @@ jobs:
     needs: nix
     if: github.ref == 'refs/heads/main' && github.event_name != 'pull_request'
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      actions: read
+      pages: write
+      id-token: write
     environment:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}
