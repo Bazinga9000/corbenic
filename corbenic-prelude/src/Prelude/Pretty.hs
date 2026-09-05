@@ -5,7 +5,6 @@ module Prelude.Pretty where
 import Data.Text qualified as T
 import Relude
 import Relude.Extra.Enum (safeToEnum)
-import Data.Text (unpack)
 
 -- | Canonical pretty-printer typeclass.
 class Pretty a where
@@ -31,7 +30,7 @@ mkSubscript n = toText (map digit (show n :: String))
 unSubscript :: Text -> Maybe Natural
 unSubscript "₀" = Just 0
 unSubscript txt = if leadingZero txt' then Nothing else go (reverse txt') where
-  txt' = unpack txt
+  txt' = toString txt
 
   leadingZero ('₀':_) = True
   leadingZero _ = False

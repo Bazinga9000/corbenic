@@ -33,6 +33,10 @@ lexerTests =
                 toks "42" @?= Right [TokLiteral (LitNatural 42), TokNewline, TokEOF]
             , testCase "rational" $
                 toks "1.5" @?= Right [TokLiteral (LitRational (3 % 2)), TokNewline, TokEOF]
+            , testCase "decimal dot is part of the literal" $
+                toks "1.5" @?= Right [TokLiteral (LitRational (3 % 2)), TokNewline, TokEOF]
+            , testCase "dot with spaces is not a decimal" $
+                toks "1 . 5" @?= Right [TokLiteral (LitNatural 1), TokDot, TokLiteral (LitNatural 5), TokNewline, TokEOF]
             , testCase "lone zero" $
                 toks "0" @?= Right [TokLiteral (LitNatural 0), TokNewline, TokEOF]
             , testCase "bools" $
@@ -82,6 +86,10 @@ lexerTests =
                 toks "≔ ⠛ ≣ ≘ ≛ ≗ ¦" @?= Right [TokTermDecl, TokHasType, TokConstraintAlias, TokTypeAlias, TokNewtype, TokData, TokConstructorBar, TokNewline, TokEOF]
             , testCase "typeclass operators" $
                 toks "⇒ ⋒ ⋹" @?= Right [TokTypeclassImplies, TokTypeclassIntersect, TokTypeclassElement, TokNewline, TokEOF]
+            , testCase "module glyphs" $
+                toks "▣ ⇲ ⌸ ⇱ ※" @?= Right [TokModule, TokImport, TokQualify, TokReexport, TokNoExport, TokNewline, TokEOF]
+            , testCase "dot" $
+                toks "." @?= Right [TokDot, TokNewline, TokEOF]
             ]
         , testGroup
             "Fixity"

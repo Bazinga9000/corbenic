@@ -14,5 +14,5 @@ ioLex fp str = do
     case lexed of
         Left err -> putTextLn (renderDiagnostic fp str err) >> return Nothing
         Right (toks, warns) -> do
-            forM_ warns (\w -> putTextLn $ renderDiagnostic fp str w)
+            forM_ warns (putTextLn . renderDiagnostic fp str)
             return $ Just toks

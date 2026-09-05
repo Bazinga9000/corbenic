@@ -6,7 +6,7 @@ import Syntax.Identifier
 import Syntax.Literal
 
 data SurfaceModule ann = SurfaceModule
-    { smName :: (AnnotatedIdent ann)
+    { smName :: AnnotatedIdent ann
     , smImports :: [SurfaceImport ann]
     , smDecls :: [MaybeExported SurfaceDeclaration ann]
     , smTermFixity :: FixityEnv
@@ -21,7 +21,7 @@ data SurfaceImport ann
     = SurfaceImport ann ModulePath (Maybe Qualifier) (ImportSpec ann) -- ⇲ Foo.Bar [⌸ T] [block]
     | SurfaceReexport ann ModulePath (ImportSpec ann) -- ⇱ Foo.Bar [block]
 
-data Qualifier = Qualifier Identifier
+newtype Qualifier = Qualifier Identifier
 
 data ImportSpec ann
     = ImportAll
