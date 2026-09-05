@@ -95,7 +95,7 @@ lexToken = do
         Nothing -> pass
         Just t -> do
             end <- gets lexPos
-            emit (Located (Span start end) t)
+            emit (Annotated (Span start end) t)
 
 stripLeadingSpace :: String -> Text
 stripLeadingSpace s = toText (dropWhile (== ' ') s)

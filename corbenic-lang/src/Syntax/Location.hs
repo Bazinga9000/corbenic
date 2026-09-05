@@ -1,7 +1,8 @@
 module Syntax.Location (
     Pos (..),
     Span (..),
-    Located (..),
+    Located,
+    Annotated (..),
 ) where
 
 import Prelude
@@ -22,11 +23,7 @@ data Span = Span
     deriving (Eq, Show, Ord)
 
 -- | A node tagged with its source span
-data Located a = Located
-    { locSpan :: Span
-    , locAnn :: a
-    }
-    deriving (Eq, Show, Functor, Foldable, Traversable)
+type Located a = Annotated Span a
 
 instance Semigroup Span where
     -- this probably isn't necessary since spans are usually in order and disjoint
@@ -41,5 +38,12 @@ instance Pretty Span where
         | posLine s == posLine e = prettyPrint s <> "-" <> toText (show (posCol e) :: String)
         | otherwise = prettyPrint s <> "-" <> prettyPrint e
 
-instance (Pretty a) => Pretty (Located a) where
-    prettyPrint (Located _ a) = prettyPrint a
+-- an annotated thing, regardless of its annotation type
+data Annotated ann a = Annotated
+    { annTag :: ann
+    , annVal :: a
+    }
+    deriving (Eq, Show, Functor, Foldable, Traversable)
+
+instance (Pretty a) => Pretty (Annotated ann a) where
+    prettyPrint (Annotated _ a) = prettyPrint a

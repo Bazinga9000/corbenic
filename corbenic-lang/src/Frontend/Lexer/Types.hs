@@ -129,7 +129,7 @@ emit t = modify' (\st -> st{lexOut = t : lexOut st})
 emitHere :: Token -> Lexer ()
 emitHere t = do
     p <- gets lexPos
-    emit (Located (Span p p) t)
+    emit (Annotated (Span p p) t)
 
 -- emit a warning, marked with the current position
 warn :: LexWarningKind -> Lexer ()

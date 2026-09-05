@@ -5,7 +5,7 @@ import Syntax.Chars (QBracket (..))
 import Syntax.Fixity
 import Syntax.Identifier
 import Syntax.Literal
-import Syntax.Location (locAnn)
+import Syntax.Location
 import Syntax.Token
 import Prelude
 
@@ -15,7 +15,7 @@ import Test.Tasty.HUnit
 
 -- lex and ignore warnings
 toks :: String -> Either LexError [Token]
-toks s = map locAnn . fst <$> scanTokens s
+toks s = map (\(Annotated _ a) -> a) . fst <$> scanTokens s
 
 -- assert that lexing fails with a certain error
 failsWith :: String -> LexErrorKind -> Assertion
