@@ -7,12 +7,25 @@ import Syntax.Literal
 
 data SurfaceModule ann = SurfaceModule
     { smName :: (AnnotatedIdent ann)
+    , smImports :: [SurfaceImport ann]
     , smDecls :: [MaybeExported SurfaceDeclaration ann]
     , smTermFixity :: FixityEnv
     , smTypeFixity :: FixityEnv
     }
 
 data MaybeExported thing ann = Exported (thing ann) | Hidden (thing ann)
+
+type ModulePath = [Identifier]
+
+data SurfaceImport ann
+    = SurfaceImport ann ModulePath (Maybe Qualifier) (ImportSpec ann) -- ⇲ Foo.Bar [⌸ T] [block]
+    | SurfaceReexport ann ModulePath (ImportSpec ann) -- ⇱ Foo.Bar [block]
+
+data Qualifier = Qualifier Identifier
+
+data ImportSpec ann
+    = ImportAll
+    | ImportSelect [AnnotatedIdent ann] [AnnotatedIdent ann]
 
 -- things explicitly not here that might be surprising:
 -- SIf - conditionals are done by the `?` glyph, which is `Bool -> a -> a -> a`
@@ -74,7 +87,7 @@ data SurfaceWhereDeclaration ann
     | SWDType (SurfaceTypeDecl ann)
 
 data SurfaceDeclaration ann
-    = SDTerm (SurfaceTermDecl ann)
+    = SDTerm (Maybe (SurfaceTypeDecl ann)) (SurfaceTermDecl ann)
     | SDData (SurfaceDataDecl ann)
     | SDNewtype (SurfaceNewtypeDecl ann)
     | SDTypeAlias (SurfaceTypeAlias ann)

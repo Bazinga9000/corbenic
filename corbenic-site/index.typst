@@ -161,3 +161,50 @@ A block in any other context is Corbenic's method of scoped binding (like `let` 
   y ≔ «quux» b c
   z ≔ «fingore» x y ⍝ local bindings can refer to each other!
 ```
+
+= Modules, Imports, and Exports
+
+Corbenic has a module system. All files must begin with a module declaration, which is, on the *first* line,
+
+```
+▣ ModuleName
+```
+
+Module names must be standard Latin characters, and the opening square is a reserved character. Unlike Haskell, you do not specify the export list at the top of the file, but rather every declaration is assumed to be exported unless it is preceeded with the (reserved) character `※`, in which case it is hidden.
+
+The following declaration types can be marked hidden:
+
+- Top level term declarations, type declarations (alias, newtype, data, or constraint aliases)
+- Type constructors of newtype or data declarations
+
+To import a module, use the reserved `⇲` glyph:
+```
+⇲ Foo.Bar
+```
+This will search, relative to the main module, for `Foo/Bar.corb` as the imported module. If you wish to import only certain things, list those imports in a block after the import:
+```
+⇲ Foo.Bar
+  Baz
+  Quux
+```
+alternatively, you can import everything *except* some set by prefixing each line in the block with `※`:
+```
+⇲ Foo.Bar
+  ※ Baz
+  ※ Quux
+```
+Mixing both `※`-prefixed lines and normal lines is permissible, but a warning (as the explicit exclusions are redundant).
+
+All imported bindings will be in scope for the entire module. To qualify these imports, use the reserved `⌸` glyph:
+```
+⇲ Foo.Bar ⌸ T
+  Baz
+  Quux
+```
+will put the bindings in scope as `T.Baz` and `T.Quux`. If no name is specified after the `⌸`, the bindings are qualified by the module name, e.g `Foo.Bar.Baz`.
+
+If you wish to re-export this module, you need to specify that with the reserved `⇱` glyph:
+```
+⇱ Foo.Bar
+```
+which will by default re-export all bindings from that module which were imported. This set can be restricted further using the same block format as used when importing a module.

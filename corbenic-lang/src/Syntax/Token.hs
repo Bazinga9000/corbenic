@@ -49,6 +49,12 @@ data Token
     | TokDo
     | TokDoMonadic
     | TokNoExport
+    | -- modules
+      TokModule
+    | TokImport
+    | TokQualify
+    | TokReexport
+    | TokDot
     | -- EOF
       TokEOF
     deriving (Eq, Show)
@@ -87,4 +93,9 @@ instance Pretty Token where
     prettyPrint TokDo = "🝣"
     prettyPrint TokDoMonadic = "↤"
     prettyPrint TokNoExport = "※"
+    prettyPrint TokModule = "▣"
+    prettyPrint TokImport = "⇲"
+    prettyPrint TokQualify = "⌸"
+    prettyPrint TokReexport = "⇱"
+    prettyPrint TokDot = "."
     prettyPrint TokEOF = "⌿"

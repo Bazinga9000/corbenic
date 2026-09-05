@@ -41,6 +41,11 @@ reservedTokens =
         , ('🝣', TokDo)
         , ('↤', TokDoMonadic)
         , ('※', TokNoExport)
+        , ('▣', TokModule)
+        , ('⇲', TokImport)
+        , ('⌸', TokQualify)
+        , ('⇱', TokReexport)
+        , ('.', TokDot)
         ]
 
 -- handled specifically by the lexer
