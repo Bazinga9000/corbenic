@@ -6,6 +6,9 @@ author:          Bazinga_9000
 maintainer:      bazninethousand@gmail.com
 build-type:      Simple
 
+extra-source-files:
+    test/Cases/**/*.corb
+
 flag dev
   description: Be less pedantic for rapid rebuilds
   default: False
@@ -59,8 +62,10 @@ test-suite test-corbenic
     main-is:          Tests.hs
     hs-source-dirs:   test
     other-modules:    Tests.Lexer
+                    , Tests.Cases
     build-depends:    corbenic-lang
                     , corbenic-prelude
+                    , file-embed
                     , tasty
                     , tasty-hunit
                     , tasty-quickcheck
