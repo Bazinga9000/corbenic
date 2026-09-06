@@ -9,9 +9,15 @@ data Fixity
     | RightAssocBinary Natural
     | NonAssocBinary Natural
     | PrefixUnary
-    deriving (Eq, Show)
+    deriving (Eq, Ord, Show)
 
 newtype FixityEnv = FixityEnv (Map Identifier Fixity)
+
+instance Semigroup FixityEnv where
+    FixityEnv a <> FixityEnv b = FixityEnv (a <> b)
+
+instance Monoid FixityEnv where
+    mempty = FixityEnv mempty
 
 instance Pretty Fixity where
     prettyPrint (LeftAssocBinary prec) = "⦿⌞" <> mkSubscript prec

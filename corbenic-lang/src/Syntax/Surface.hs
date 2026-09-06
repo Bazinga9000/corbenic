@@ -3,18 +3,18 @@ module Syntax.Surface where
 import Syntax.Documentation
 import Syntax.Fixity
 import Syntax.Literal
-import Syntax.Location (Annotated (..))
+import Syntax.Location
 
 data SurfaceName
     = SNRaw Text
     | SNQuoted Text
     | SNPrimitive Text
-    deriving (Show)
+    deriving (Eq, Show)
 
 data SurfaceDeclName
     = SDNRaw Text
     | SDNQuoted Text
-    deriving (Show)
+    deriving (Eq, Show)
 
 data SurfaceModule ann = SurfaceModule
     { smName :: ModulePath ann
@@ -199,3 +199,111 @@ data SurfaceClassContext ann = SurfaceClassContext
     { sctxAnn :: ann
     , sctxApps :: [SurfaceClassApp ann]
     } -- (Foo a b, Bar c d, Baz e f, ...)
+
+-- HasSpan instances ---------------------------------------------------------
+
+instance (HasSpan ann) => HasSpan (SurfaceExpr ann) where
+    spanOf (SELiteral ann _) = spanOf ann
+    spanOf (SEIdentifier (Annotated ann _)) = spanOf ann
+    spanOf (SELambda ann _ _) = spanOf ann
+    spanOf (SEApp ann _ _) = spanOf ann
+    spanOf (SETypeLambda ann _ _) = spanOf ann
+    spanOf (SETypeApp ann _ _) = spanOf ann
+    spanOf (SEWhere ann _ _) = spanOf ann
+    spanOf (SEDo ann _ _) = spanOf ann
+    spanOf (SECase ann _ _) = spanOf ann
+    spanOf (SELambdaCase ann _) = spanOf ann
+    spanOf (SEList ann _) = spanOf ann
+    spanOf (SETuple ann _) = spanOf ann
+    spanOf (SEOpSectionL ann _ _) = spanOf ann
+    spanOf (SEOpSectionR ann _ _) = spanOf ann
+    spanOf (SEInfix ann _ _ _) = spanOf ann
+    spanOf (SEAnnotation ann _ _) = spanOf ann
+    spanOf (SEHole ann) = spanOf ann
+
+instance (HasSpan ann) => HasSpan (SurfacePattern ann) where
+    spanOf (SPLiteral ann _) = spanOf ann
+    spanOf (SPVar (Annotated ann _)) = spanOf ann
+    spanOf (SPCon ann _ _) = spanOf ann
+    spanOf (SPTuple ann _) = spanOf ann
+    spanOf (SPList ann _) = spanOf ann
+    spanOf (SPWild ann) = spanOf ann
+
+instance (HasSpan ann) => HasSpan (SurfaceType ann) where
+    spanOf (STName (Annotated ann _)) = spanOf ann
+    spanOf (STApp ann _ _) = spanOf ann
+    spanOf (STFun ann _ _) = spanOf ann
+    spanOf (STList ann _) = spanOf ann
+    spanOf (STTuple ann _) = spanOf ann
+    spanOf (STConstraint ann _) = spanOf ann
+    spanOf (STForall ann _ _) = spanOf ann
+    spanOf (STExists ann _ _) = spanOf ann
+
+instance (HasSpan ann) => HasSpan (SurfaceDoInstruction ann) where
+    spanOf (SDIBindName ann _ _) = spanOf ann
+    spanOf (SDIExtractMonad ann _ _) = spanOf ann
+    spanOf (SDIMonadicStmt ann _) = spanOf ann
+
+instance (HasSpan ann) => HasSpan (SurfaceBranch ann) where
+    spanOf = spanOf . sbAnn
+
+instance (HasSpan ann) => HasSpan (SurfaceTypeConstructor ann) where
+    spanOf = spanOf . stcAnn
+
+instance (HasSpan ann) => HasSpan (SurfaceTermDecl ann) where
+    spanOf = spanOf . stdAnn
+
+instance (HasSpan ann) => HasSpan (SurfaceTypeDecl ann) where
+    spanOf = spanOf . stydAnn
+
+instance (HasSpan ann) => HasSpan (SurfaceDataDecl ann) where
+    spanOf = spanOf . sddAnn
+
+instance (HasSpan ann) => HasSpan (SurfaceNewtypeDecl ann) where
+    spanOf = spanOf . sndAnn
+
+instance (HasSpan ann) => HasSpan (SurfaceTypeAlias ann) where
+    spanOf = spanOf . staAnn
+
+instance (HasSpan ann) => HasSpan (SurfaceConstraintAlias ann) where
+    spanOf = spanOf . scaAnn
+
+instance (HasSpan ann) => HasSpan (SurfaceAssociatedType ann) where
+    spanOf = spanOf . satAnn
+
+instance (HasSpan ann) => HasSpan (SurfaceClassMember ann) where
+    spanOf (SCMethod d _) = spanOf d
+    spanOf (SCAssociatedType d) = spanOf d
+
+instance (HasSpan ann) => HasSpan (SurfaceWhereDeclaration ann) where
+    spanOf (SWDTerm _ d) = spanOf d
+    spanOf (SWDType d) = spanOf d
+
+instance (HasSpan ann) => HasSpan (SurfaceDeclaration ann) where
+    spanOf (SDTerm _ d) = spanOf d
+    spanOf (SDClass d) = spanOf d
+    spanOf (SDInstance d) = spanOf d
+    spanOf (SDData d) = spanOf d
+    spanOf (SDNewtype d) = spanOf d
+    spanOf (SDTypeAlias d) = spanOf d
+    spanOf (SDConstraintAlias d) = spanOf d
+
+instance (HasSpan ann) => HasSpan (SurfaceClassDecl ann) where
+    spanOf = spanOf . scdAnn
+
+instance (HasSpan ann) => HasSpan (SurfaceClassApp ann) where
+    spanOf = spanOf . scappAnn
+
+instance (HasSpan ann) => HasSpan (SurfaceInstanceDecl ann) where
+    spanOf = spanOf . sidAnn
+
+instance (HasSpan ann) => HasSpan (SurfaceInstanceMember ann) where
+    spanOf (SIMethod d) = spanOf d
+    spanOf (SIMAssociatedType d) = spanOf d
+
+instance (HasSpan ann) => HasSpan (SurfaceClassContext ann) where
+    spanOf = spanOf . sctxAnn
+
+instance (HasSpan ann) => HasSpan (SurfaceImport ann) where
+    spanOf (SurfaceImport ann _ _ _) = spanOf ann
+    spanOf (SurfaceReexport ann _ _) = spanOf ann

@@ -59,7 +59,7 @@ data Token
     | TokDot
     | -- EOF
       TokEOF
-    deriving (Eq, Show)
+    deriving (Eq, Ord, Show)
 
 instance Pretty Token where
     prettyPrint (TokLiteral l) = prettyPrint l

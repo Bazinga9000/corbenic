@@ -9,7 +9,7 @@ data Literal
     | LitBool Bool
     | LitChar Char
     | LitText Text
-    deriving (Eq, Show)
+    deriving (Eq, Ord, Show)
 
 instance Pretty Literal where
     prettyPrint (LitNatural n) = show n

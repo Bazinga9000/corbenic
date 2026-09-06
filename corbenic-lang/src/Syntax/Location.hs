@@ -3,6 +3,13 @@ module Syntax.Location (
     Span (..),
     Located,
     Annotated (..),
+    HasSpan (..),
+    combine,
+    combine3,
+    combine4,
+    combine5,
+    combine6,
+    combineAll,
 ) where
 
 import Prelude
@@ -43,7 +50,40 @@ data Annotated ann a = Annotated
     { annTag :: ann
     , annVal :: a
     }
-    deriving (Eq, Show, Functor, Foldable, Traversable)
+    deriving (Eq, Ord, Show, Functor, Foldable, Traversable)
+
+class HasSpan a where
+    spanOf :: a -> Span
+
+instance HasSpan (Located x) where
+    spanOf = annTag
+
+instance HasSpan Span where
+    spanOf = id
+
+instance HasSpan (Span, a) where
+    spanOf (s, _) = s
+
+instance HasSpan (Span, a, b) where
+    spanOf (s, _, _) = s
+
+combine :: (HasSpan a, HasSpan b) => a -> b -> Span
+combine a b = spanOf a <> spanOf b
+
+combine3 :: (HasSpan a, HasSpan b, HasSpan c) => a -> b -> c -> Span
+combine3 a b c = spanOf a <> spanOf b <> spanOf c
+
+combine4 :: (HasSpan a, HasSpan b, HasSpan c, HasSpan d) => a -> b -> c -> d -> Span
+combine4 a b c d = spanOf a <> spanOf b <> spanOf c <> spanOf d
+
+combine5 :: (HasSpan a, HasSpan b, HasSpan c, HasSpan d, HasSpan e) => a -> b -> c -> d -> e -> Span
+combine5 a b c d e = spanOf a <> spanOf b <> spanOf c <> spanOf d <> spanOf e
+
+combine6 :: (HasSpan a, HasSpan b, HasSpan c, HasSpan d, HasSpan e, HasSpan f) => a -> b -> c -> d -> e -> f -> Span
+combine6 a b c d e f = spanOf a <> spanOf b <> spanOf c <> spanOf d <> spanOf e <> spanOf f
+
+combineAll :: (HasSpan a) => NonEmpty a -> Span
+combineAll = sconcat . fmap spanOf
 
 instance (Pretty a) => Pretty (Annotated ann a) where
     prettyPrint (Annotated _ a) = prettyPrint a
