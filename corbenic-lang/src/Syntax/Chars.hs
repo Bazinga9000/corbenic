@@ -23,6 +23,7 @@ reservedTokens =
         , ('}', TokRBrace)
         , ('〈', TokAngleL)
         , ('〉', TokAngleR)
+        , ('_', TokHole)
         , (',', TokComma)
         , ('≔', TokTermDecl)
         , ('⠛', TokHasType)

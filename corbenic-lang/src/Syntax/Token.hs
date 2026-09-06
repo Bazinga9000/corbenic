@@ -10,6 +10,7 @@ import Syntax.Literal
 data Token
     = TokLiteral Literal
     | TokIdentifier Identifier
+    | TokHole
     | -- grouping
       TokLParen
     | TokRParen
@@ -67,6 +68,7 @@ instance Pretty Token where
     prettyPrint (TokLiteral l) = prettyPrint l
     prettyPrint (TokIdentifier i) = prettyPrint i
     prettyPrint (TokFixityDecl f) = prettyPrint f
+    prettyPrint TokHole = "_"
     prettyPrint TokLParen = "("
     prettyPrint TokRParen = ")"
     prettyPrint TokLBracket = "["
