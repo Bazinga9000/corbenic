@@ -83,9 +83,9 @@ lexerTests =
             [ testCase "grouping" $
                 toks "( ) [ ] { } ," @?= Right [TokLParen, TokRParen, TokLBracket, TokRBracket, TokLBrace, TokRBrace, TokComma, TokNewline, TokEOF]
             , testCase "declaration glyphs" $
-                toks "≔ ⠛ ≣ ≘ ≛ ≗ ¦" @?= Right [TokTermDecl, TokHasType, TokConstraintAlias, TokTypeAlias, TokNewtype, TokData, TokConstructorBar, TokNewline, TokEOF]
+                toks "≔ ⠛ ≣ ≘ ≛ ≗ ¦ ≋" @?= Right [TokTermDecl, TokHasType, TokConstraintAlias, TokTypeAlias, TokNewtype, TokData, TokConstructorBar, TokAssociatedType, TokNewline, TokEOF]
             , testCase "typeclass operators" $
-                toks "⇒ ⋒ ⋹" @?= Right [TokTypeclassImplies, TokTypeclassIntersect, TokTypeclassElement, TokNewline, TokEOF]
+                toks "⇒ ⋒ ⋹ ∴" @?= Right [TokTypeclassImplies, TokTypeclassIntersect, TokTypeclassElement, TokTypeclassInstance, TokNewline, TokEOF]
             , testCase "module glyphs" $
                 toks "▣ ⇲ ⌸ ⇱ ※" @?= Right [TokModule, TokImport, TokQualify, TokReexport, TokNoExport, TokNewline, TokEOF]
             , testCase "dot" $
