@@ -37,10 +37,12 @@ data Token
     | TokNewtype
     | TokData
     | TokConstructorBar
+    | TokAssociatedType
     | -- typeclasses
       TokTypeclassImplies
     | TokTypeclassIntersect
     | TokTypeclassElement
+    | TokTypeclassInstance
     | -- syntactic structure
       TokLambda
     | TokTypeLambda
@@ -83,9 +85,11 @@ instance Pretty Token where
     prettyPrint TokNewtype = "≛"
     prettyPrint TokData = "≗"
     prettyPrint TokConstructorBar = "¦"
+    prettyPrint TokAssociatedType = "≋"
     prettyPrint TokTypeclassImplies = "⇒"
     prettyPrint TokTypeclassIntersect = "⋒"
     prettyPrint TokTypeclassElement = "⋹"
+    prettyPrint TokTypeclassInstance = "∴"
     prettyPrint TokLambda = "λ"
     prettyPrint TokTypeLambda = "Λ"
     prettyPrint TokMapsTo = "↦"
