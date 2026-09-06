@@ -17,7 +17,8 @@ data SurfaceDeclName
     deriving (Show)
 
 data SurfaceModule ann = SurfaceModule
-    { smName :: Annotated ann SurfaceName
+    { smName :: ModulePath ann
+    , smDoc :: Maybe DocComment -- module-wide doc comment
     , smImports :: [SurfaceImport ann]
     , smDecls :: [MaybeExported SurfaceDeclaration ann]
     , smTermFixity :: FixityEnv
@@ -26,13 +27,13 @@ data SurfaceModule ann = SurfaceModule
 
 data MaybeExported thing ann = Exported (thing ann) | Hidden (thing ann)
 
-type ModulePath = [SurfaceName]
+type ModulePath ann = NonEmpty (Annotated ann SurfaceName)
 
 data SurfaceImport ann
-    = SurfaceImport ann ModulePath (Maybe Qualifier) (ImportSpec ann) -- ⇲ Foo.Bar [⌸ T] [block]
-    | SurfaceReexport ann ModulePath (ImportSpec ann) -- ⇱ Foo.Bar [block]
+    = SurfaceImport ann (ModulePath ann) (Maybe Qualifier) (Maybe (ImportSpec ann)) -- ⇲ Foo.Bar [⌸ [T]] [block]
+    | SurfaceReexport ann (ModulePath ann) (ImportSpec ann) -- ⇱ Foo.Bar [block]
 
-newtype Qualifier = Qualifier SurfaceName
+data Qualifier = ExpliitQualifier SurfaceName | ImplicitQualifier
 
 data ImportSpec ann
     = ImportAll
@@ -60,19 +61,36 @@ data SurfaceExpr ann
     | SEAnnotation ann (SurfaceExpr ann) (SurfaceType ann) -- inline type annotation
     | SEHole ann
 
-data SurfaceBranch ann = SurfaceBranch ann (SurfacePattern ann) (SurfaceExpr ann)
+data SurfaceBranch ann = SurfaceBranch
+    { sbAnn :: ann
+    , sbPattern :: SurfacePattern ann
+    , sbBody :: SurfaceExpr ann
+    }
 
-data SurfacePattern ann = SPVar (Annotated ann SurfaceName) | SPCon ann (Annotated ann SurfaceName) [SurfacePattern ann] | SPWild ann
+data SurfacePattern ann
+    = SPLiteral ann Literal -- 0
+    | SPVar (Annotated ann SurfaceName) -- x
+    | SPCon ann (Annotated ann SurfaceName) [SurfacePattern ann] -- Just x
+    | SPTuple ann [SurfacePattern ann] -- (a, b, c)
+    | SPList ann [SurfacePattern ann] -- [a, b, c]
+    | SPWild ann -- _
 
 data SurfaceType ann
     = STName (Annotated ann SurfaceName)
     | STApp ann (SurfaceType ann) (SurfaceType ann)
     | STFun ann (SurfaceType ann) (SurfaceType ann)
+    | STList ann (SurfaceType ann) -- [a]
+    | STTuple ann [SurfaceType ann] -- (a, b, c)
     | STConstraint ann (SurfaceClassContext ann)
     | STForall ann [Annotated ann SurfaceName] (SurfaceType ann)
     | STExists ann [Annotated ann SurfaceName] (SurfaceType ann)
 
-data SurfaceTypeConstructor ann = SurfaceTypeConstructor ann DocComment (Annotated ann SurfaceName) [SurfaceType ann]
+data SurfaceTypeConstructor ann = SurfaceTypeConstructor
+    { stcAnn :: ann
+    , stcDoc :: DocComment
+    , stcName :: Annotated ann SurfaceName
+    , stcFields :: [SurfaceType ann]
+    }
 
 data SurfaceDoInstruction ann
     = SDIBindName ann (Annotated ann SurfaceName) (SurfaceExpr ann) -- x ≔ y
@@ -80,30 +98,104 @@ data SurfaceDoInstruction ann
     | SDIMonadicStmt ann (SurfaceExpr ann) -- x
 
 -- individual types of declarations
-data SurfaceTermDecl ann = SurfaceTermDecl ann DocComment (Annotated ann SurfaceDeclName) (SurfaceExpr ann) -- binding, body
-data SurfaceTypeDecl ann = SurfaceTypeDecl ann DocComment (Annotated ann SurfaceDeclName) (SurfaceType ann) -- binding, type
-data SurfaceDataDecl ann = SurfaceDataDecl ann DocComment (Annotated ann SurfaceDeclName) [MaybeExported SurfaceTypeConstructor ann] -- type name, type constructors
-data SurfaceNewtypeDecl ann = SurfaceNewtypeDecl ann DocComment (Annotated ann SurfaceDeclName) (MaybeExported SurfaceTypeConstructor ann) -- type name, single type constructor
-data SurfaceTypeAlias ann = SurfaceTypeAlias ann DocComment (Annotated ann SurfaceDeclName) [Annotated ann SurfaceName] (SurfaceType ann) -- alias name, alias parameters, aliasee
-data SurfaceConstraintAlias ann = SurfaceConstraintAlias ann DocComment (SurfaceClassApp ann) (SurfaceClassContext ann) -- alias name, aliased context
+data SurfaceTermDecl ann = SurfaceTermDecl
+    { stdAnn :: ann
+    , stdDoc :: DocComment
+    , stdName :: Annotated ann SurfaceDeclName
+    , stdBody :: SurfaceExpr ann
+    }
+
+data SurfaceTypeDecl ann = SurfaceTypeDecl
+    { stydAnn :: ann
+    , stydDoc :: DocComment
+    , stydName :: Annotated ann SurfaceDeclName
+    , stydType :: SurfaceType ann
+    }
+
+data SurfaceDataDecl ann = SurfaceDataDecl
+    { sddAnn :: ann
+    , sddDoc :: DocComment
+    , sddName :: Annotated ann SurfaceDeclName
+    , sddParams :: [Annotated ann SurfaceName]
+    , sddConstructors :: [MaybeExported SurfaceTypeConstructor ann]
+    }
+
+data SurfaceNewtypeDecl ann = SurfaceNewtypeDecl
+    { sndAnn :: ann
+    , sndDoc :: DocComment
+    , sndName :: Annotated ann SurfaceDeclName
+    , sndParams :: [Annotated ann SurfaceName]
+    , sndConstructor :: MaybeExported SurfaceTypeConstructor ann
+    }
+
+data SurfaceTypeAlias ann = SurfaceTypeAlias
+    { staAnn :: ann
+    , staDoc :: DocComment
+    , staName :: Annotated ann SurfaceDeclName
+    , staParams :: [Annotated ann SurfaceName]
+    , staBody :: SurfaceType ann
+    }
+
+data SurfaceConstraintAlias ann = SurfaceConstraintAlias
+    { scaAnn :: ann
+    , scaDoc :: DocComment
+    , scaHead :: SurfaceClassApp ann
+    , scaBody :: SurfaceClassContext ann
+    }
+
+data SurfaceAssociatedType ann = SurfaceAssociatedType
+    { satAnn :: ann
+    , satDoc :: DocComment
+    , satName :: Annotated ann SurfaceDeclName
+    , satParams :: [Annotated ann SurfaceName]
+    , satBody :: Maybe (SurfaceType ann)
+    }
 
 -- declaration contexts (allow certain subsets of them)
 data SurfaceClassMember ann
-    = SCMTerm (SurfaceTermDecl ann)
-    | SCMType (SurfaceTypeDecl ann)
-    | SCMTypeAlias (SurfaceTypeAlias ann)
+    = SCMethod (SurfaceTypeDecl ann) (Maybe (SurfaceTermDecl ann))
+    | SCAssociatedType (SurfaceAssociatedType ann)
 
 data SurfaceWhereDeclaration ann
-    = SWDTerm (SurfaceTermDecl ann)
+    = SWDTerm (Maybe (SurfaceTypeDecl ann)) (SurfaceTermDecl ann)
     | SWDType (SurfaceTypeDecl ann)
 
 data SurfaceDeclaration ann
     = SDTerm (Maybe (SurfaceTypeDecl ann)) (SurfaceTermDecl ann)
+    | SDClass (SurfaceClassDecl ann)
+    | SDInstance (SurfaceInstanceDecl ann)
     | SDData (SurfaceDataDecl ann)
     | SDNewtype (SurfaceNewtypeDecl ann)
     | SDTypeAlias (SurfaceTypeAlias ann)
     | SDConstraintAlias (SurfaceConstraintAlias ann)
 
 -- typeclass definitions
-data SurfaceClassApp ann = SurfaceClassApp ann (Annotated ann SurfaceName) [SurfaceType ann] -- Foo a b c ...
-data SurfaceClassContext ann = SurfaceClassContext ann [SurfaceClassApp ann] -- (Foo a b, Bar c d, Baz e f, ...)
+data SurfaceClassDecl ann = SurfaceClassDecl
+    { scdAnn :: ann
+    , scdDoc :: DocComment
+    , scdSuper :: Maybe (SurfaceClassContext ann) -- constraints before ⇒
+    , scdHead :: SurfaceClassApp ann -- C a b after ⇒
+    , scdMembers :: [SurfaceClassMember ann] -- the block
+    }
+
+data SurfaceClassApp ann = SurfaceClassApp
+    { scappAnn :: ann
+    , scappName :: Annotated ann SurfaceName
+    , scappArgs :: [SurfaceType ann]
+    } -- Foo a b c ...
+
+data SurfaceInstanceDecl ann = SurfaceInstanceDecl
+    { sidAnn :: ann
+    , sidDoc :: DocComment
+    , sidHead :: SurfaceClassApp ann
+    , sidMembers :: [SurfaceInstanceMember ann]
+    }
+
+data SurfaceInstanceMember ann
+    = SIMethod (SurfaceTermDecl ann)
+    | SIMAssociatedType (SurfaceTypeAlias ann)
+
+data SurfaceClassContext ann = SurfaceClassContext
+    { sctxAnn :: ann
+    , sctxApps :: [SurfaceClassApp ann]
+    } -- (Foo a b, Bar c d, Baz e f, ...)
