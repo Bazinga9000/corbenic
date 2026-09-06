@@ -40,11 +40,15 @@ library
                     , ansi-terminal
                     , mtl
                     , containers
+                    , megaparsec
+                    , parser-combinators
                     , corbenic-prelude
     exposed-modules:   Frontend.Diagnostics
                      , Frontend.Lexer
                      , Frontend.Lexer.Tokenizers
                      , Frontend.Lexer.Types
+                     , Frontend.Parser.Fixity
+                     , Frontend.Parser.Types
                      , Frontend.IOPipeline
                      , Syntax.Chars
                      , Syntax.Documentation
@@ -63,6 +67,7 @@ test-suite test-corbenic
     hs-source-dirs:   test
     other-modules:    Tests.Lexer
                     , Tests.Cases
+                    , Tests.Fixity
     build-depends:    corbenic-lang
                     , corbenic-prelude
                     , file-embed
