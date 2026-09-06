@@ -17,6 +17,8 @@ data Token
     | TokRBracket
     | TokLBrace
     | TokRBrace
+    | TokAngleL
+    | TokAngleR
     | TokComma
     | -- lines and indentation
       TokNewline
@@ -71,6 +73,8 @@ instance Pretty Token where
     prettyPrint TokRBracket = "]"
     prettyPrint TokLBrace = "{"
     prettyPrint TokRBrace = "}"
+    prettyPrint TokAngleL = "〈"
+    prettyPrint TokAngleR = "〉"
     prettyPrint TokComma = ","
     prettyPrint TokNewline = "⏎"
     prettyPrint TokIndent = "⇥"

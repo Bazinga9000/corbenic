@@ -73,8 +73,8 @@ lexerTests =
                 toks "«+++»" @?= Right [TokIdentifier (IdentQuoted "+++"), TokNewline, TokEOF]
             , testCase "ornate brackets (primitives)" $
                 toks "﴾+ℤℤ﴿" @?= Right [TokIdentifier (IdentPrimitive "+ℤℤ"), TokNewline, TokEOF]
-            , testCase "angle brackets (type vars)" $
-                toks "〈ℕ〉" @?= Right [TokIdentifier (IdentType "ℕ"), TokNewline, TokEOF]
+            , testCase "angle brackets are reserved tokens" $
+                toks "〈ℕ〉" @?= Right [TokAngleL, TokIdentifier (IdentRaw "ℕ"), TokAngleR, TokNewline, TokEOF]
             , testCase "unterminated guillemet" $
                 failsWith "«oops" (LexUnterminated QGuillemet)
             ]

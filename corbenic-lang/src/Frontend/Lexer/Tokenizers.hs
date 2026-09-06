@@ -80,7 +80,6 @@ lexQ q = do
   where
     qIdent = case q of
         QPrimitive -> IdentPrimitive
-        QTypeVar -> IdentType
         QGuillemet -> IdentQuoted
 
 lexFixity :: Lexer Token

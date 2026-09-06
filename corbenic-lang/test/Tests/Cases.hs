@@ -23,7 +23,6 @@ cases =
     , ("indent_jump", decodeUtf8 $(embedFileRelative "test/Cases/lexerr/indent_jump.corb"), LexE (LexLayoutJumped 2))
     , ("odd_indent", decodeUtf8 $(embedFileRelative "test/Cases/lexerr/odd_indent.corb"), LexE (LexInvalidIndentLevel 1))
     , ("suffix_alone", decodeUtf8 $(embedFileRelative "test/Cases/lexerr/suffix_alone.corb"), LexE (LexUnexpected '′'))
-    , ("unterminated_angle", decodeUtf8 $(embedFileRelative "test/Cases/lexerr/unterminated_angle.corb"), LexE (LexUnterminated QTypeVar))
     , ("unterminated_char", decodeUtf8 $(embedFileRelative "test/Cases/lexerr/unterminated_char.corb"), LexE (LexUnexpected '\''))
     , ("unterminated_guillemet", decodeUtf8 $(embedFileRelative "test/Cases/lexerr/unterminated_guillemet.corb"), LexE (LexUnterminated QGuillemet))
     , ("unterminated_ornate", decodeUtf8 $(embedFileRelative "test/Cases/lexerr/unterminated_ornate.corb"), LexE (LexUnterminated QPrimitive))

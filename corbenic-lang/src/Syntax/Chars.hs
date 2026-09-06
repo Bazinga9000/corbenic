@@ -21,6 +21,8 @@ reservedTokens =
         , (']', TokRBracket)
         , ('{', TokLBrace)
         , ('}', TokRBrace)
+        , ('〈', TokAngleL)
+        , ('〉', TokAngleR)
         , (',', TokComma)
         , ('≔', TokTermDecl)
         , ('⠛', TokHasType)
@@ -101,7 +103,6 @@ isSuffixChar = (`Set.member` suffixChars)
 
 data QBracket
     = QPrimitive -- ﴾…﴿  primitives
-    | QTypeVar -- 〈…〉  type variables
     | QGuillemet -- «…»   general multichar identifiers
     deriving (Eq, Show, Ord, Enum, Bounded)
 
@@ -110,17 +111,14 @@ qBracketPairs = [(qOpen q, qClose q) | q <- universe]
 
 qOpen :: QBracket -> Char
 qOpen QPrimitive = '﴾'
-qOpen QTypeVar = '〈'
 qOpen QGuillemet = '«'
 
 qClose :: QBracket -> Char
 qClose QPrimitive = '﴿'
-qClose QTypeVar = '〉'
 qClose QGuillemet = '»'
 
 bracketName :: QBracket -> Text
 bracketName QPrimitive = "ornate"
-bracketName QTypeVar = "angle"
 bracketName QGuillemet = "guillemet"
 
 qBracketOf :: Char -> Maybe QBracket
