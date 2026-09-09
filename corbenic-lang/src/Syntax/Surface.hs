@@ -41,6 +41,7 @@ data SurfaceExpr ann
     | SEApp ann (SurfaceExpr ann) (SurfaceExpr ann) -- f x
     | SETypeLambda ann (Annotated ann Identifier) (SurfaceExpr ann) -- Λx ↦ foo
     | SETypeApp ann (SurfaceExpr ann) (SurfaceType ann) -- f 〈x〉
+    --  | SEPack ann (SurfaceType ann) (SurfaceExpr ann) -- 《witness type, term》
     | SEWhere ann (SurfaceExpr ann) [SurfaceWhereDeclaration ann] -- expr with a where block
     | SEDo ann (NonEmpty (SurfaceDoInstruction ann)) -- 🝣 \n foo ≔ bar \n baz ↤ quux \n bep
     | SECase ann (SurfaceExpr ann) [SurfaceBranch ann] -- 🝡x \n <pattern match>
@@ -65,7 +66,12 @@ data SurfacePattern ann
     | SPCon ann (Annotated ann Identifier) [SurfacePattern ann] -- Just x
     | SPTuple ann (NonEmpty (SurfacePattern ann)) -- (a, b, c)
     | SPList ann [SurfacePattern ann] -- [a, b, c]
+    --  | SPPack ann (SurfaceTypePattern ann) (SurfacePattern ann)
     | SPWild ann -- _
+
+-- data SurfaceTypePattern ann
+--     = STPVar (Annotated ann Identifier)
+--     | STPWildcard ann
 
 data SurfaceType ann
     = STName (Annotated ann Identifier)
