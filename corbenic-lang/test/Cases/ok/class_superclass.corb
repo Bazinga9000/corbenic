@@ -1,0 +1,3 @@
+▣ Foo
+(Functor x, Foldable x) ⇒ Traversable x
+  «traverse» ⠛ x → x

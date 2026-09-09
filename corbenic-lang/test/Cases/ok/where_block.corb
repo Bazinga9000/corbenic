@@ -1,0 +1,5 @@
+▣ Foo
+f ≔ «bar» x y z
+  x ≔ «baz» a b
+  y ≔ «quux» b c
+  z ≔ «fingore» x y

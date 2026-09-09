@@ -46,11 +46,6 @@ findFixities line = go line
     go (_ : rest) = go rest
     go [] = []
 
--- is this fixity a binary operator
-isBinary :: Fixity -> Bool
-isBinary PrefixUnary = False
-isBinary _ = True
-
 -- get all the tokens before a given identifier
 takeBefore :: Identifier -> [Located Token] -> [Located Token]
 takeBefore ident = takeWhile (not . isTok)

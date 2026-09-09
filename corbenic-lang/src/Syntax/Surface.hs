@@ -32,21 +32,21 @@ data ImportSpec ann
     | ImportSelect [Annotated ann Identifier] [Annotated ann Identifier]
 
 -- things explicitly not here that might be surprising:
--- SIf - conditionals are done by the `?` glyph, which is `Bool -> a -> a -> a`
+-- SIf - conditionals are done by the `?` glyph, which is `Bool -> a -> a -> a` (in the Prelude)
 -- SLet - the preferred abstraction for binding is the where block
 data SurfaceExpr ann
-    = SELiteral ann Literal -- 2
+    = SELiteral (Annotated ann Literal) -- 2
     | SEIdentifier (Annotated ann Identifier) -- x
     | SELambda ann (Annotated ann Identifier) (SurfaceExpr ann) -- λx ↦ foo
     | SEApp ann (SurfaceExpr ann) (SurfaceExpr ann) -- f x
     | SETypeLambda ann (Annotated ann Identifier) (SurfaceExpr ann) -- Λx ↦ foo
     | SETypeApp ann (SurfaceExpr ann) (SurfaceType ann) -- f 〈x〉
     | SEWhere ann (SurfaceExpr ann) [SurfaceWhereDeclaration ann] -- expr with a where block
-    | SEDo ann [SurfaceDoInstruction ann] (SurfaceExpr ann) -- 🝣 \n foo ≔ bar \n baz ↤ quux \n bep
+    | SEDo ann (NonEmpty (SurfaceDoInstruction ann)) -- 🝣 \n foo ≔ bar \n baz ↤ quux \n bep
     | SECase ann (SurfaceExpr ann) [SurfaceBranch ann] -- 🝡x \n <pattern match>
     | SELambdaCase ann [SurfaceBranch ann] -- λ🝡 \n <pattern match>
     | SEList ann [SurfaceExpr ann] -- [foo, bar, baz]
-    | SETuple ann [SurfaceExpr ann] -- (foo, bar, baz)
+    | SETuple ann (NonEmpty (SurfaceExpr ann)) -- (foo, bar, baz)
     | SEOpSectionL ann (SurfaceExpr ann) (Annotated ann Identifier) -- (3+)
     | SEOpSectionR ann (Annotated ann Identifier) (SurfaceExpr ann) -- (+3)
     | SEInfix ann (SurfaceExpr ann) (Annotated ann Identifier) (SurfaceExpr ann) -- 2+2
@@ -60,10 +60,10 @@ data SurfaceBranch ann = SurfaceBranch
     }
 
 data SurfacePattern ann
-    = SPLiteral ann Literal -- 0
+    = SPLiteral (Annotated ann Literal) -- 0
     | SPVar (Annotated ann Identifier) -- x
     | SPCon ann (Annotated ann Identifier) [SurfacePattern ann] -- Just x
-    | SPTuple ann [SurfacePattern ann] -- (a, b, c)
+    | SPTuple ann (NonEmpty (SurfacePattern ann)) -- (a, b, c)
     | SPList ann [SurfacePattern ann] -- [a, b, c]
     | SPWild ann -- _
 
@@ -72,14 +72,15 @@ data SurfaceType ann
     | STApp ann (SurfaceType ann) (SurfaceType ann)
     | STFun ann (SurfaceType ann) (SurfaceType ann)
     | STList ann (SurfaceType ann) -- [a]
-    | STTuple ann [SurfaceType ann] -- (a, b, c)
+    | STTuple ann (NonEmpty (SurfaceType ann)) -- (a, b, c)
     | STConstraint ann (SurfaceClassContext ann)
-    | STForall ann [Annotated ann Identifier] (SurfaceType ann)
-    | STExists ann [Annotated ann Identifier] (SurfaceType ann)
+    | STConstrained ann (SurfaceClassContext ann) (SurfaceType ann) -- ctx ⇒ body
+    | STForall ann (NonEmpty (Annotated ann Identifier)) (SurfaceType ann)
+    | STExists ann (NonEmpty (Annotated ann Identifier)) (SurfaceType ann)
 
 data SurfaceTypeConstructor ann = SurfaceTypeConstructor
     { stcAnn :: ann
-    , stcDoc :: DocComment
+    , stcDoc :: Maybe DocComment
     , stcName :: Annotated ann Identifier
     , stcFields :: [SurfaceType ann]
     }
@@ -87,26 +88,26 @@ data SurfaceTypeConstructor ann = SurfaceTypeConstructor
 data SurfaceDoInstruction ann
     = SDIBindName ann (Annotated ann Identifier) (SurfaceExpr ann) -- x ≔ y
     | SDIExtractMonad ann (Annotated ann Identifier) (SurfaceExpr ann) -- x ↤ y
-    | SDIMonadicStmt ann (SurfaceExpr ann) -- x
+    | SDIMonadicStmt (SurfaceExpr ann) -- x
 
 -- individual types of declarations
 data SurfaceTermDecl ann = SurfaceTermDecl
     { stdAnn :: ann
-    , stdDoc :: DocComment
+    , stdDoc :: Maybe DocComment
     , stdName :: Annotated ann Identifier
     , stdBody :: SurfaceExpr ann
     }
 
 data SurfaceTypeDecl ann = SurfaceTypeDecl
     { stydAnn :: ann
-    , stydDoc :: DocComment
+    , stydDoc :: Maybe DocComment
     , stydName :: Annotated ann Identifier
     , stydType :: SurfaceType ann
     }
 
 data SurfaceDataDecl ann = SurfaceDataDecl
     { sddAnn :: ann
-    , sddDoc :: DocComment
+    , sddDoc :: Maybe DocComment
     , sddName :: Annotated ann Identifier
     , sddParams :: [Annotated ann Identifier]
     , sddConstructors :: [MaybeExported SurfaceTypeConstructor ann]
@@ -114,7 +115,7 @@ data SurfaceDataDecl ann = SurfaceDataDecl
 
 data SurfaceNewtypeDecl ann = SurfaceNewtypeDecl
     { sndAnn :: ann
-    , sndDoc :: DocComment
+    , sndDoc :: Maybe DocComment
     , sndName :: Annotated ann Identifier
     , sndParams :: [Annotated ann Identifier]
     , sndConstructor :: MaybeExported SurfaceTypeConstructor ann
@@ -122,7 +123,7 @@ data SurfaceNewtypeDecl ann = SurfaceNewtypeDecl
 
 data SurfaceTypeAlias ann = SurfaceTypeAlias
     { staAnn :: ann
-    , staDoc :: DocComment
+    , staDoc :: Maybe DocComment
     , staName :: Annotated ann Identifier
     , staParams :: [Annotated ann Identifier]
     , staBody :: SurfaceType ann
@@ -130,14 +131,14 @@ data SurfaceTypeAlias ann = SurfaceTypeAlias
 
 data SurfaceConstraintAlias ann = SurfaceConstraintAlias
     { scaAnn :: ann
-    , scaDoc :: DocComment
+    , scaDoc :: Maybe DocComment
     , scaHead :: SurfaceClassApp ann
     , scaBody :: SurfaceClassContext ann
     }
 
 data SurfaceAssociatedType ann = SurfaceAssociatedType
     { satAnn :: ann
-    , satDoc :: DocComment
+    , satDoc :: Maybe DocComment
     , satName :: Annotated ann Identifier
     , satParams :: [Annotated ann Identifier]
     , satBody :: Maybe (SurfaceType ann)
@@ -150,7 +151,6 @@ data SurfaceClassMember ann
 
 data SurfaceWhereDeclaration ann
     = SWDTerm (Maybe (SurfaceTypeDecl ann)) (SurfaceTermDecl ann)
-    | SWDType (SurfaceTypeDecl ann)
 
 data SurfaceDeclaration ann
     = SDTerm (Maybe (SurfaceTypeDecl ann)) (SurfaceTermDecl ann)
@@ -164,7 +164,7 @@ data SurfaceDeclaration ann
 -- typeclass definitions
 data SurfaceClassDecl ann = SurfaceClassDecl
     { scdAnn :: ann
-    , scdDoc :: DocComment
+    , scdDoc :: Maybe DocComment
     , scdSuper :: Maybe (SurfaceClassContext ann) -- constraints before ⇒
     , scdHead :: SurfaceClassApp ann -- C a b after ⇒
     , scdMembers :: [SurfaceClassMember ann] -- the block
@@ -178,14 +178,14 @@ data SurfaceClassApp ann = SurfaceClassApp
 
 data SurfaceInstanceDecl ann = SurfaceInstanceDecl
     { sidAnn :: ann
-    , sidDoc :: DocComment
+    , sidDoc :: Maybe DocComment
     , sidHead :: SurfaceClassApp ann
     , sidMembers :: [SurfaceInstanceMember ann]
     }
 
 data SurfaceInstanceMember ann
-    = SIMethod (SurfaceTermDecl ann)
-    | SIMAssociatedType (SurfaceTypeAlias ann)
+    = SIMMethod (SurfaceTermDecl ann)
+    | SIMAssociatedType (SurfaceAssociatedType ann)
 
 data SurfaceClassContext ann = SurfaceClassContext
     { sctxAnn :: ann
@@ -195,14 +195,14 @@ data SurfaceClassContext ann = SurfaceClassContext
 -- HasSpan instances ---------------------------------------------------------
 
 instance (HasSpan ann) => HasSpan (SurfaceExpr ann) where
-    spanOf (SELiteral ann _) = spanOf ann
+    spanOf (SELiteral lit) = spanOf . annTag $ lit
     spanOf (SEIdentifier (Annotated ann _)) = spanOf ann
     spanOf (SELambda ann _ _) = spanOf ann
     spanOf (SEApp ann _ _) = spanOf ann
     spanOf (SETypeLambda ann _ _) = spanOf ann
     spanOf (SETypeApp ann _ _) = spanOf ann
     spanOf (SEWhere ann _ _) = spanOf ann
-    spanOf (SEDo ann _ _) = spanOf ann
+    spanOf (SEDo ann _) = spanOf ann
     spanOf (SECase ann _ _) = spanOf ann
     spanOf (SELambdaCase ann _) = spanOf ann
     spanOf (SEList ann _) = spanOf ann
@@ -214,7 +214,7 @@ instance (HasSpan ann) => HasSpan (SurfaceExpr ann) where
     spanOf (SEHole ann) = spanOf ann
 
 instance (HasSpan ann) => HasSpan (SurfacePattern ann) where
-    spanOf (SPLiteral ann _) = spanOf ann
+    spanOf (SPLiteral lit) = spanOf . annTag $ lit
     spanOf (SPVar (Annotated ann _)) = spanOf ann
     spanOf (SPCon ann _ _) = spanOf ann
     spanOf (SPTuple ann _) = spanOf ann
@@ -228,13 +228,14 @@ instance (HasSpan ann) => HasSpan (SurfaceType ann) where
     spanOf (STList ann _) = spanOf ann
     spanOf (STTuple ann _) = spanOf ann
     spanOf (STConstraint ann _) = spanOf ann
+    spanOf (STConstrained ann _ _) = spanOf ann
     spanOf (STForall ann _ _) = spanOf ann
     spanOf (STExists ann _ _) = spanOf ann
 
 instance (HasSpan ann) => HasSpan (SurfaceDoInstruction ann) where
     spanOf (SDIBindName ann _ _) = spanOf ann
     spanOf (SDIExtractMonad ann _ _) = spanOf ann
-    spanOf (SDIMonadicStmt ann _) = spanOf ann
+    spanOf (SDIMonadicStmt e) = spanOf e
 
 instance (HasSpan ann) => HasSpan (SurfaceBranch ann) where
     spanOf = spanOf . sbAnn
@@ -269,7 +270,6 @@ instance (HasSpan ann) => HasSpan (SurfaceClassMember ann) where
 
 instance (HasSpan ann) => HasSpan (SurfaceWhereDeclaration ann) where
     spanOf (SWDTerm _ d) = spanOf d
-    spanOf (SWDType d) = spanOf d
 
 instance (HasSpan ann) => HasSpan (SurfaceDeclaration ann) where
     spanOf (SDTerm _ d) = spanOf d
@@ -290,7 +290,7 @@ instance (HasSpan ann) => HasSpan (SurfaceInstanceDecl ann) where
     spanOf = spanOf . sidAnn
 
 instance (HasSpan ann) => HasSpan (SurfaceInstanceMember ann) where
-    spanOf (SIMethod d) = spanOf d
+    spanOf (SIMMethod d) = spanOf d
     spanOf (SIMAssociatedType d) = spanOf d
 
 instance (HasSpan ann) => HasSpan (SurfaceClassContext ann) where

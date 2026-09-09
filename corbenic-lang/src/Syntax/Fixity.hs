@@ -2,6 +2,7 @@ module Syntax.Fixity (
     Fixity (..),
     FixityEnv (..),
     lookupFixity,
+    isBinary
 ) where
 
 import Data.Map.Strict qualified as Map
@@ -20,6 +21,10 @@ newtype FixityEnv = FixityEnv (Map Identifier Fixity)
 
 lookupFixity :: Identifier -> FixityEnv -> Maybe Fixity
 lookupFixity name (FixityEnv m) = Map.lookup name m
+
+isBinary :: Fixity -> Bool
+isBinary PrefixUnary = False
+isBinary _ = True
 
 instance Semigroup FixityEnv where
     FixityEnv a <> FixityEnv b = FixityEnv (a <> b)

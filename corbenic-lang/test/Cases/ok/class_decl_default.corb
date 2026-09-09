@@ -1,0 +1,4 @@
+▣ Foo
+⇒ Monoid a
+  «unit» ⠛ a
+  «unit» ≔ «mempty»

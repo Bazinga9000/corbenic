@@ -47,6 +47,8 @@ library
                      , Frontend.Lexer
                      , Frontend.Lexer.Tokenizers
                      , Frontend.Lexer.Types
+                     , Frontend.Parser
+                     , Frontend.Parser.Combinators
                      , Frontend.Parser.Fixity
                      , Frontend.Parser.Types
                      , Frontend.IOPipeline
@@ -71,6 +73,7 @@ test-suite test-corbenic
     build-depends:    corbenic-lang
                     , corbenic-prelude
                     , file-embed
+                    , megaparsec
                     , tasty
                     , tasty-hunit
                     , tasty-quickcheck
