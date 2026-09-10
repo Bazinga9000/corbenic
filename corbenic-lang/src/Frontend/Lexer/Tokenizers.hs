@@ -93,7 +93,8 @@ lexFixity = do
             | not (null digits) -> pure (TokFixityDecl (NonAssocBinary prec))
         ([corner], Just prec)
             | not (null digits) -> pure (TokFixityDecl (fixityOf corner prec))
-        _ -> throwAt start (LexBadFixity (toText fixityDecl)) where
+        _ -> throwAt start (LexBadFixity (toText fixityDecl))
+          where
             fixityDecl = takeWhile (/= '\n') $ charFixityDeclarator : afterDecl
   where
     fixityOf c

@@ -2,7 +2,7 @@ module Syntax.Fixity (
     Fixity (..),
     FixityEnv (..),
     lookupFixity,
-    isBinary
+    isBinary,
 ) where
 
 import Data.Map.Strict qualified as Map

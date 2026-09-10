@@ -72,7 +72,7 @@ listOf p = do
     openBracket <- tok TokLBracket
     elems <- sepBy p (tok TokComma)
     closeBracket <- tok TokRBracket
-    return $ (spanOf openBracket, spanOf closeBracket, elems)
+    return (spanOf openBracket, spanOf closeBracket, elems)
 
 -- parse a tuple of things
 tupleOf :: Parser a -> Parser (Span, Span, NonEmpty a)
@@ -82,4 +82,4 @@ tupleOf p = do
     void $ tok TokComma
     elems <- sepBy p (tok TokComma)
     closeParen <- tok TokRParen
-    return $ (spanOf openParen, spanOf closeParen, e1 :| elems)
+    return (spanOf openParen, spanOf closeParen, e1 :| elems)

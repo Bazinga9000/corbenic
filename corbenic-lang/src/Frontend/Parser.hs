@@ -8,18 +8,18 @@ import Control.Monad.RWS.Strict (runRWST)
 import Text.Megaparsec hiding (ParseError, Token, many, some)
 
 import Control.Monad.Combinators.Expr
+import Data.List qualified as L
+import Data.Map qualified as M
 import Frontend.Parser.Combinators
 import Frontend.Parser.Fixity (collectFixities)
 import Frontend.Parser.Types
-import Data.Map qualified as M
-import Data.List qualified as L
+import Relude.Extra (foldl1')
 import Syntax.Documentation
 import Syntax.Fixity
 import Syntax.Identifier
 import Syntax.Location
 import Syntax.Surface
 import Syntax.Token
-import Relude.Extra (foldl1')
 
 -- an identifier (will allow primitives, illegally placed primitives are rejected by TC)
 parseIdentifier :: Parser (Located Identifier)
@@ -201,10 +201,13 @@ parseSEIdentifier :: Parser (SurfaceExpr Span)
 parseSEIdentifier = do
     fixity <- termFixity
     let FixityEnv m = fixity
-    Annotated sp t <- satisfy (\lt -> case annVal lt of
-        TokIdentifier (IdentRaw i) -> M.lookup (IdentRaw i) m == Nothing -- raw are only allowed if they aren't fixity'd
-        TokIdentifier _ -> True -- quoted/primitives are always usable as values
-        _ -> False)
+    Annotated sp t <-
+        satisfy
+            ( \lt -> case annVal lt of
+                TokIdentifier (IdentRaw i) -> isNothing (M.lookup (IdentRaw i) m) -- raw are only allowed if they aren't fixity'd
+                TokIdentifier _ -> True -- quoted/primitives are always usable as values
+                _ -> False
+            )
     pure (SEIdentifier (Annotated sp (identifierOf t)))
   where
     identifierOf :: Token -> Identifier
@@ -233,7 +236,7 @@ parseSETypeLambda = do
 parseSEDo :: Parser (SurfaceExpr Span)
 parseSEDo = do
     doTok <- tok TokDo
-    (openSpan, closeSpan, doInstrs) <- block $ parseDoBlock
+    (openSpan, closeSpan, doInstrs) <- block parseDoBlock
     return $ SEDo (combine3 doTok openSpan closeSpan) doInstrs
   where
     parseDoBlock :: Parser (NonEmpty (SurfaceDoInstruction Span))
@@ -308,10 +311,13 @@ parseInfixOp :: Parser (Annotated Span Identifier)
 parseInfixOp = do
     fixity <- termFixity
     let FixityEnv m = fixity
-        binaryOps = [ ident | (ident, f) <- M.assocs m, isBinary f ]
-    t <- satisfy (\lt -> case annVal lt of
-        TokIdentifier i -> any (\op -> sameIdent op i) binaryOps
-        _ -> False)
+        binaryOps = [ident | (ident, f) <- M.assocs m, isBinary f]
+    t <-
+        satisfy
+            ( \lt -> case annVal lt of
+                TokIdentifier i -> any (`sameIdent` i) binaryOps
+                _ -> False
+            )
     pure (Annotated (spanOf t) (identOf (annVal t)))
   where
     identOf :: Token -> Identifier
@@ -352,7 +358,6 @@ parseSurfacePattern = do
         _ -> case h of
             SPVar (Annotated sp ident) -> pure (SPCon sp (Annotated sp ident) args)
             _ -> error "parseSurfacePattern: application needs a constructor head"
-
 
 parsePatternAtom :: Parser (SurfacePattern Span)
 parsePatternAtom =
@@ -494,10 +499,15 @@ parseSurfaceDataDecl = do
     parseDataConstructors :: Parser [MaybeExported SurfaceTypeConstructor Span]
     parseDataConstructors = do
         inline <- sepBy (maybeExported parseSurfaceTypeConstructor) (tok TokConstructorBar)
-        mblock <- optional (try (do
-            (_, _, ctors) <- block (many (tok_ TokConstructorBar *> maybeExported parseSurfaceTypeConstructor <* newline))
-            pure ctors))
-        pure (inline <> maybe [] id mblock)
+        mblock <-
+            optional
+                ( try
+                    ( do
+                        (_, _, ctors) <- block (many (tok_ TokConstructorBar *> maybeExported parseSurfaceTypeConstructor <* newline))
+                        pure ctors
+                    )
+                )
+        pure (inline <> fromMaybe [] mblock)
 
 parseSurfaceNewtypeDecl :: Parser (SurfaceNewtypeDecl Span)
 parseSurfaceNewtypeDecl = do
@@ -534,7 +544,7 @@ parseSurfaceAssociatedType = do
     declarator <- tok TokAssociatedType
     ty <- optional parseSurfaceType
     void (optional newline)
-    let totalSpan = combineAll $ spanOf name :| fmap spanOf params <> maybe [] one (fmap spanOf ty) <> [spanOf declarator]
+    let totalSpan = combineAll $ spanOf name :| fmap spanOf params <> maybe [] (one . spanOf) ty <> [spanOf declarator]
     return $ SurfaceAssociatedType totalSpan dc name params ty
 
 parseSurfaceTypeConstructor :: Parser (SurfaceTypeConstructor Span)
@@ -546,7 +556,8 @@ parseSurfaceTypeConstructor = do
     pure (SurfaceTypeConstructor totalSpan dc name fields)
 
 parseSurfaceClassMember :: Parser (SurfaceClassMember Span)
-parseSurfaceClassMember = try method <|> (SCAssociatedType <$> parseSurfaceAssociatedType) where
+parseSurfaceClassMember = try method <|> (SCAssociatedType <$> parseSurfaceAssociatedType)
+  where
     method = do
         _ <- optional tokFixity -- we might have a fixity declaration, ignore it
         sig <- parseSurfaceTypeDecl
@@ -561,12 +572,11 @@ parseWhereBlock = do
 parseWhereDecl :: Parser (SurfaceWhereDeclaration Span)
 parseWhereDecl = do
     mty <- optional (try parseSurfaceTypeDecl)
-    term <- parseSurfaceTermDecl
-    pure (SWDTerm mty term)
+    SWDTerm mty <$> parseSurfaceTermDecl
 
 parseSurfaceInstanceMember :: Parser (SurfaceInstanceMember Span)
 parseSurfaceInstanceMember =
-    (try (SIMMethod <$> parseSurfaceTermDecl)) <|> (SIMAssociatedType <$> parseSurfaceAssociatedType)
+    try (SIMMethod <$> parseSurfaceTermDecl) <|> (SIMAssociatedType <$> parseSurfaceAssociatedType)
 
 parseSurfaceClassDecl :: Parser (SurfaceClassDecl Span)
 parseSurfaceClassDecl = do
@@ -588,7 +598,7 @@ parseSurfaceInstanceDecl = do
 
 parseSurfaceDeclaration :: Parser (SurfaceDeclaration Span)
 parseSurfaceDeclaration =
-    try (SDTerm <$> (Just <$> parseSurfaceTypeDecl) <*> parseSurfaceTermDecl)
+    try ((SDTerm . Just <$> parseSurfaceTypeDecl) <*> parseSurfaceTermDecl)
         <|> try (SDTerm Nothing <$> parseSurfaceTermDecl)
         <|> try (SDData <$> parseSurfaceDataDecl)
         <|> try (SDNewtype <$> parseSurfaceNewtypeDecl)
@@ -603,8 +613,8 @@ parseSurfaceDeclaration =
 
 parseSurfaceClassApp :: Parser (SurfaceClassApp Span)
 parseSurfaceClassApp =
-   -- needs set notation first and backtrack since it can consume before discovering there is no ⋹
-   try parseSurfaceClassAppSetNotation <|> parseSurfaceClassAppStandard
+    -- needs set notation first and backtrack since it can consume before discovering there is no ⋹
+    try parseSurfaceClassAppSetNotation <|> parseSurfaceClassAppStandard
 
 parseSurfaceClassContext :: Parser (SurfaceClassContext Span)
 parseSurfaceClassContext =
@@ -633,8 +643,8 @@ parseSurfaceClassAppStandard = do
     name <- parseIdentifier
     tys <- many parseSTAtom
     let fullSpan = case reverse tys of
-          [] -> spanOf name
-          (t:_) -> combine name t
+            [] -> spanOf name
+            (t : _) -> combine name t
     return $ SurfaceClassApp fullSpan name tys
 
 -- a single class appplication, written as a constraint
@@ -657,7 +667,6 @@ parseSurfaceClassContextSetNotation = do
     let fullSpan = combine3 (tys L.!! 0) elemOf (L.last names)
     let apps = fmap (\n -> SurfaceClassApp fullSpan n tys) names
     return $ SurfaceClassContext fullSpan apps
-
 
 ---------------------------------------------
 -- PRATT HELPERS
@@ -698,14 +707,14 @@ mkOperatorTable mkInfix mkIdent mkApp (FixityEnv rho) = binaryGroups <> unaryGro
     -- parse one operator ident and return the infix combining function.
     pfunc ident = do
         annIdent <- parseOneIdent ident
-        pure (\lhs rhs -> mkInfix annIdent lhs rhs)
+        pure (mkInfix annIdent)
 
     -- group the binary operators by precedence, descending.
     binaryGroups =
-        map (map snd)
-            $ L.groupBy (\a b -> fst a == fst b)
-            $ sortBy (comparing (Down . fst))
-            $ map mkBinaryInfix binaries
+        map (map snd) $
+            L.groupBy (\a b -> fst a == fst b) $
+                sortWith (Down . fst) $
+                    map mkBinaryInfix binaries
 
     -- the precedence of a unary fixity.
     -- no general precOf to make it clear that unary and binary precs are different
@@ -716,11 +725,11 @@ mkOperatorTable mkInfix mkIdent mkApp (FixityEnv rho) = binaryGroups <> unaryGro
 
     -- unary operators grouped by precedence.
     unaryGroups =
-        map (mkUnaryLevel . snd)
-            $ sortBy (comparing (Down . fst))
-            $ M.toList
-            $ M.fromListWith (<>)
-            $ map (\u -> (unaryPrec (snd u), [u])) unaries
+        map (mkUnaryLevel . snd) $
+            sortWith (Down . fst) $
+                M.toList $
+                    M.fromListWith (<>) $
+                        map (\u -> (unaryPrec (snd u), [u])) unaries
 
     -- make a single precedence level of unary operators, any number of the level's prefix ops,
     -- same for the postfix ops
@@ -744,7 +753,7 @@ mkOperatorTable mkInfix mkIdent mkApp (FixityEnv rho) = binaryGroups <> unaryGro
     -- parse one-or-more prefix idents; `! ! x` = `! (! x)`.
     prefixParser ne = do
         idents <- some (foldl1' (<|>) ne)
-        pure (\x -> foldr (\op acc -> mkApp (mkIdent op) acc) x idents)
+        pure (\x -> foldr (mkApp . mkIdent) x idents)
 
     -- parse one-or-more postfix idents; `x ? ?` = `(x ?) ?`.
     postfixParser ne = do
@@ -760,24 +769,22 @@ sameIdent (IdentPrimitive a) (IdentPrimitive b) = a == b
 sameIdent _ _ = False
 
 mkTermOperatorTable :: FixityEnv -> [[Operator Parser (SurfaceExpr Span)]]
-mkTermOperatorTable fixity =
-    mkOperatorTable mkInfix mkIdent mkApp fixity
+mkTermOperatorTable = mkOperatorTable mkInfix mkIdent mkApp
   where
     mkInfix :: Located Identifier -> SurfaceExpr Span -> SurfaceExpr Span -> SurfaceExpr Span
     mkInfix op lhs rhs = SEInfix (combine3 lhs op rhs) lhs op rhs
     mkIdent :: Located Identifier -> SurfaceExpr Span
-    mkIdent op = SEIdentifier op
+    mkIdent = SEIdentifier
     mkApp :: SurfaceExpr Span -> SurfaceExpr Span -> SurfaceExpr Span
     mkApp f a = SEApp (combine f a) f a
 
 mkTypeOperatorTable :: FixityEnv -> [[Operator Parser (SurfaceType Span)]]
-mkTypeOperatorTable fixity =
-    mkOperatorTable mkInfix mkIdent mkApp fixity
+mkTypeOperatorTable = mkOperatorTable mkInfix mkIdent mkApp
   where
     mkInfix :: Located Identifier -> SurfaceType Span -> SurfaceType Span -> SurfaceType Span
     mkInfix op lhs rhs = STApp (combine3 lhs op rhs) (STApp (combine lhs op) (STName op) lhs) rhs
     mkIdent :: Located Identifier -> SurfaceType Span
-    mkIdent op = STName op
+    mkIdent = STName
     mkApp :: SurfaceType Span -> SurfaceType Span -> SurfaceType Span
     mkApp f a = STApp (combine f a) f a
 
@@ -791,20 +798,20 @@ defaultTypeFixityEnv = FixityEnv (one (IdentRaw "→", RightAssocBinary 5))
 parse :: [Located Token] -> Either ParseError (SurfaceModule Span, [ParseWarning])
 parse toks = do
     let (termFix, typeFix) = collectFixities toks
-    (m, _, warns) <- first bundleToParseError $
-        runParser (runRWST parseModule (termFix, defaultTypeFixityEnv <> typeFix) ()) "" toks
+    (m, _, warns) <-
+        first bundleToParseError $
+            runParser (runRWST parseModule (termFix, defaultTypeFixityEnv <> typeFix) ()) "" toks
     pure (m, warns)
-    where
-
+  where
     bundleToParseError :: ParseErrorBundle [Located Token] Void -> ParseError
     bundleToParseError bundle =
-      let pe = head (bundleErrors bundle)
-      in ParseError (spanAtOffset (errorOffset pe)) ParseSyntaxError
+        let pe = head (bundleErrors bundle)
+         in ParseError (spanAtOffset (errorOffset pe)) ParseSyntaxError
 
     spanAtOffset :: Int -> Span
     spanAtOffset off =
-      case dropWhile (\t -> posOffset (spanStart (spanOf t)) < fromIntegral off) toks of
-        (t : _) -> spanOf t
-        [] -> case reverse toks of
-          (t : _) -> spanOf t
-          [] -> error "spanAtOffset: empty token stream"
+        case dropWhile (\t -> posOffset (spanStart (spanOf t)) < fromIntegral off) toks of
+            (t : _) -> spanOf t
+            [] -> case reverse toks of
+                (t : _) -> spanOf t
+                [] -> error "spanAtOffset: empty token stream"
