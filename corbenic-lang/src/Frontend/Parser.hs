@@ -664,16 +664,16 @@ parseSurfaceClassContextSetNotation = do
 ---------------------------------------------
 
 -- builds the operator table for makeExprParser from a fixity environment
--- since makeExprParser forbids unary operators of equal precedence from coöcurring,
--- we need to merge all the unary operations into one parser which parses any number of them
--- and put that one last
+-- since makeExprParser forbids unary operators of equal precedence and pre/post-ness from coöcurring,
+-- we need to merge all the prefix/postfix unary operations into one parser which parses any number of them
+-- and use those two parsers at each unary precedence level
 mkOperatorTable ::
     (Located Identifier -> a -> a -> a) -> -- mkInfix: op lhs rhs -> node
     (Located Identifier -> a) -> -- mkIdent: op -> node
     (a -> a -> a) -> -- mkApp: f x -> node
     FixityEnv ->
     [[Operator Parser a]]
-mkOperatorTable mkInfix mkIdent mkApp (FixityEnv rho) = binaryGroups <> unaryGroup
+mkOperatorTable mkInfix mkIdent mkApp (FixityEnv rho) = binaryGroups <> unaryGroups
   where
     parseOneIdent :: Identifier -> Parser (Located Identifier)
     parseOneIdent ident = do
@@ -707,17 +707,49 @@ mkOperatorTable mkInfix mkIdent mkApp (FixityEnv rho) = binaryGroups <> unaryGro
             $ sortBy (comparing (Down . fst))
             $ map mkBinaryInfix binaries
 
-    -- all unaries are PrefixUnary, so we discard the fixity and compress them
-    -- into one Prefix operator that parses any of the unary idents.
-    unaryGroup = case nonEmpty (map (parseOneIdent . fst) unaries) of
-        Nothing -> []
-        Just ne ->
-            [ [ Prefix (unaryParser ne)] ]
+    -- the precedence of a unary fixity.
+    -- no general precOf to make it clear that unary and binary precs are different
+    unaryPrec :: Fixity -> Natural
+    unaryPrec (PrefixUnary n) = n
+    unaryPrec (PostfixUnary n) = n
+    unaryPrec _ = error "unaryPrec: not a unary fixity (unreachable)"
 
-    -- parse one-or-more prefix idents and fold them into an application chain.
-    unaryParser ne = do
+    -- unary operators grouped by precedence.
+    unaryGroups =
+        map (mkUnaryLevel . snd)
+            $ sortBy (comparing (Down . fst))
+            $ M.toList
+            $ M.fromListWith (<>)
+            $ map (\u -> (unaryPrec (snd u), [u])) unaries
+
+    -- make a single precedence level of unary operators, any number of the level's prefix ops,
+    -- same for the postfix ops
+    mkUnaryLevel ops =
+        let prefixes = map (parseOneIdent . fst) (filter (isPrefix . snd) ops)
+            postfixes = map (parseOneIdent . fst) (filter (isPostfix . snd) ops)
+            prefixOp = case nonEmpty prefixes of
+                Nothing -> []
+                Just ne -> [Prefix (prefixParser ne)]
+            postfixOp = case nonEmpty postfixes of
+                Nothing -> []
+                Just ne -> [Postfix (postfixParser ne)]
+         in prefixOp <> postfixOp
+    isPrefix :: Fixity -> Bool
+    isPrefix (PrefixUnary _) = True
+    isPrefix _ = False
+    isPostfix :: Fixity -> Bool
+    isPostfix (PostfixUnary _) = True
+    isPostfix _ = False
+
+    -- parse one-or-more prefix idents; `! ! x` = `! (! x)`.
+    prefixParser ne = do
         idents <- some (foldl1' (<|>) ne)
-        pure (\x -> foldl' mkApp x (map mkIdent idents))
+        pure (\x -> foldr (\op acc -> mkApp (mkIdent op) acc) x idents)
+
+    -- parse one-or-more postfix idents; `x ? ?` = `(x ?) ?`.
+    postfixParser ne = do
+        idents <- some (foldl1' (<|>) ne)
+        pure (\x -> foldl' (\acc op -> mkApp acc (mkIdent op)) x idents)
 
 -- are these two idents identical? we can't use the Eq instance here
 -- since those consider raw and quoted the same, but in pratt quoted aren't legal ever

@@ -66,8 +66,11 @@ charTextQuote = '"'
 charFixityDeclarator :: Char
 charFixityDeclarator = '⦿'
 
-charFixityUnary :: Char
-charFixityUnary = '⟓'
+charFixityPrefixUnary :: Char
+charFixityPrefixUnary = '⟓'
+
+charFixityPostfixUnary :: Char
+charFixityPostfixUnary = 'Ŀ'
 
 charCornerL :: Char
 charCornerL = '⌞'
@@ -81,7 +84,7 @@ reservedChars =
         Map.keys reservedTokens
             ++ map fst qBracketPairs
             ++ map snd qBracketPairs
-            ++ [charComment, charQuote, charTextQuote, charFixityDeclarator, charFixityUnary]
+            ++ [charComment, charQuote, charTextQuote, charFixityDeclarator, charFixityPrefixUnary, charFixityPostfixUnary]
 
 isReserved :: Char -> Bool
 isReserved = (`Set.member` reservedChars)

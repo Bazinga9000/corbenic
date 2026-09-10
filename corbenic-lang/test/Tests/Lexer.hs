@@ -100,7 +100,9 @@ lexerTests =
             , testCase "non-assoc prec 4" $
                 toks "⦿₄" @?= Right [TokFixityDecl (NonAssocBinary 4), TokNewline, TokEOF]
             , testCase "prefix unary" $
-                toks "⦿⟓" @?= Right [TokFixityDecl PrefixUnary, TokNewline, TokEOF]
+                toks "⦿⟓₀" @?= Right [TokFixityDecl (PrefixUnary 0), TokNewline, TokEOF]
+            , testCase "postfix unary" $
+                toks "⦿Ŀ₀" @?= Right [TokFixityDecl (PostfixUnary 0), TokNewline, TokEOF]
             , testCase "multi-digit precedence" $
                 toks "⦿⌟₆₄" @?= Right [TokFixityDecl (RightAssocBinary 64), TokNewline, TokEOF]
             , testCase "lone subscript zero precedence" $

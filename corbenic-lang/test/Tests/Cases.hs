@@ -80,6 +80,8 @@ cases =
     , ("type_app_expr", decodeUtf8 $(embedFileRelative "test/Cases/ok/type_app_expr.corb"), Okay)
     , ("type_app_multi", decodeUtf8 $(embedFileRelative "test/Cases/ok/type_app_multi.corb"), Okay)
     , ("prefix_unary", decodeUtf8 $(embedFileRelative "test/Cases/ok/prefix_unary.corb"), Okay)
+    , ("postfix_unary", decodeUtf8 $(embedFileRelative "test/Cases/ok/postfix_unary.corb"), Okay)
+    , ("unary_precedence", decodeUtf8 $(embedFileRelative "test/Cases/ok/unary_precedence.corb"), Okay)
     , ("class_superclass", decodeUtf8 $(embedFileRelative "test/Cases/ok/class_superclass.corb"), Okay)
     , ("class_set_context", decodeUtf8 $(embedFileRelative "test/Cases/ok/class_set_context.corb"), Okay)
     , ("hidden_decl", decodeUtf8 $(embedFileRelative "test/Cases/ok/hidden_decl.corb"), Okay)

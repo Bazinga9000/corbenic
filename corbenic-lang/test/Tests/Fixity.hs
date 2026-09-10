@@ -37,5 +37,9 @@ fixityTests =
         , testCase "prefix unary" $ do
             let src = decodeUtf8 $(embedFileRelative "test/Cases/fixity/prefix_unary.corb")
             let (term, _) = runFixity src
-            assertFixity term (IdentRaw "!") PrefixUnary
+            assertFixity term (IdentRaw "!") (PrefixUnary 0)
+        , testCase "postfix unary" $ do
+            let src = decodeUtf8 $(embedFileRelative "test/Cases/fixity/postfix_unary.corb")
+            let (term, _) = runFixity src
+            assertFixity term (IdentRaw "?") (PostfixUnary 0)
         ]

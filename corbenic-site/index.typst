@@ -94,8 +94,10 @@ Corbenic has multiple types of declarations. To distinguish between declarations
   - For *right-associative binary operators*, add `⌟` followed by the precedence as a *subscripted* number.
   - For *left-associative binary operators*, add `⌞` followed by the precedence, again as a subscripted number.
   - For *non-associative binary operators*, add only the precedence, again as a subscripted number.
-  - For *prefixed unary operators*, add `⟓`. These do not need precedence and bind more tightly than all binary operators.
+  - For *prefixed unary operators*, add `⟓` followed by the precedence, again as a subscripted number.
+  - For *postfixed unary operators*, add `Ŀ` followed by the precedence, again as a subscripted number.
   - Other than being a natural number, there is no restriction on precedence level, though it is recommended for most users to keep their precedences in the range zero to nine unless there is a pressing reason to do otherwise.
+  - All unary operations bind tighter than all binary operations. Unary operations of the same precedence currently associate to the left, but this might change in a future version, so try not to rely on that behavior.
 
 The following are the full definitions of the `Additive` and `Multiplicative` typeclasses to demonstrate the various declaration features:
 ```

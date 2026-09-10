@@ -86,24 +86,21 @@ lexFixity :: Lexer Token
 lexFixity = do
     start <- gets lexPos
     afterDecl <- gets lexInput
-    mc <- peek
-    case mc of
-        Just c
-            | c == charFixityUnary -> consume >> pure (TokFixityDecl PrefixUnary)
-        _ -> do
-            corners <- spanWhile (`elem` [charCornerL, charCornerR])
-            digits <- spanWhile isSubDigit
-            case (corners, unSubscript (toText digits)) of
-                ([], Just prec)
-                    | not (null digits) -> pure (TokFixityDecl (NonAssocBinary prec))
-                ([corner], Just prec)
-                    | not (null digits) -> pure (TokFixityDecl (fixityOf corner prec))
-                _ -> throwAt start (LexBadFixity (toText fixityDecl)) where
-                    fixityDecl = takeWhile (/= '\n') $ charFixityDeclarator : afterDecl
+    corners <- spanWhile (`elem` [charCornerL, charCornerR, charFixityPrefixUnary, charFixityPostfixUnary])
+    digits <- spanWhile isSubDigit
+    case (corners, unSubscript (toText digits)) of
+        ([], Just prec)
+            | not (null digits) -> pure (TokFixityDecl (NonAssocBinary prec))
+        ([corner], Just prec)
+            | not (null digits) -> pure (TokFixityDecl (fixityOf corner prec))
+        _ -> throwAt start (LexBadFixity (toText fixityDecl)) where
+            fixityDecl = takeWhile (/= '\n') $ charFixityDeclarator : afterDecl
   where
     fixityOf c
         | c == charCornerL = LeftAssocBinary
         | c == charCornerR = RightAssocBinary
+        | c == charFixityPrefixUnary = PrefixUnary
+        | c == charFixityPostfixUnary = PostfixUnary
         | otherwise = NonAssocBinary
 
 -- | Lex a numeric literal into either an natural or rational literal
