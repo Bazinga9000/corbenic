@@ -62,6 +62,7 @@ In Corbenic, most predefined functions and operators are single Unicode glyphs. 
   - Any sequence of subscripted digits (`₀₁₂₃₄₅₆₇₈₉`) that does not begin with a leading `₀`, *except* that a lone `₀` is legal. These subscripted digits are Corbenic's way to get numbers into identifier names when they're genuinely useful: `SHA₂₅₆` is one identifier naming SHA-256, and operations on `Bifunctor`s are often defined with the same glyphs as the corresponding operations on Functors suffixed with `₂`.
   - Any of the prime characters: `′`, `″`, `‴`, `‵`, `‶`, `‷`
   - The subscript infinity `͚`.
+  - The superscript capital B `𐞄`. (This is used for the fixed width integer and natural types.)
   - The superscript plus and minus `⁺` and `⁻`
   - The complement symbol `∁` (commonly seen in operations involving contravariant functors)
 - Characters used for quoting literals are reserved. These are `'` for character literals, `"` for text literals, and `[` and `]` for list terms and types.

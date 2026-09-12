@@ -51,6 +51,9 @@ library
                      , Frontend.Parser.Combinators
                      , Frontend.Parser.Fixity
                      , Frontend.Parser.Types
+                     , Frontend.TypeChecker.Types
+                     , Frontend.TypeChecker.Error
+                     , Frontend.TypeChecker.Seed
                      , Frontend.IOPipeline
                      , Syntax.Chars
                      , Syntax.Documentation

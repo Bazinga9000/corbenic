@@ -99,6 +99,7 @@ suffixChars =
             ++ "′″‴‵‶‷"
             ++ "∁"
             ++ "͚"
+            ++ "𐞄"
             ++ "₀₁₂₃₄₅₆₇₈₉"
 
 isSuffixChar :: Char -> Bool
