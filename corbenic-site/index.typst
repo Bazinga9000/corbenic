@@ -68,6 +68,7 @@ In Corbenic, most predefined functions and operators are single Unicode glyphs. 
 - Parentheses `(` and `)` are reserved (for grouping).
 - The character `⍝` is used to begin comments and is thus reserved.
 - Digits `0123456789` are reserved for numeric literals.
+- The character `⏎` is reserved and is equivalent to a newline, with one exception: the number of spaces after a `⏎` does *not* affect the indentation level (see the section on Blocks below).
 - Any single non-reserved character not covered by these rules is an identifier.
   - Examples: `+`, `π`, and `ꙮ`, `f+`, and `xyz` are all sequences of one-character identifiers.
 

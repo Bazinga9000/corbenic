@@ -51,6 +51,7 @@ reservedTokens =
         , ('⌸', TokQualify)
         , ('⇱', TokReexport)
         , ('.', TokDot)
+        , ('⏎', TokNewline)
         ]
 
 -- handled specifically by the lexer
