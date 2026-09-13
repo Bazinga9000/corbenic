@@ -47,10 +47,12 @@ data ParseWarning = ParseWarning Span ParseWarningKind
 
 data ParseWarningKind
     = WarnMixedImport
+    | WarnDeprecated Text Text
     deriving (Eq, Show)
 
 instance Pretty ParseWarningKind where
     prettyPrint WarnMixedImport = "mixing selected and hidden imports is redundant"
+    prettyPrint (WarnDeprecated bad good) = bad <> " is deprecated. Use " <> good <> " instead."
 
 instance Pretty ParseWarning where
     prettyPrint (ParseWarning _ k) = prettyPrint k
