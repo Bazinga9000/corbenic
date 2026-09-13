@@ -18,6 +18,9 @@ data CorbenicKind
 -- a kind variable (just a natural)
 newtype KindVar = KindVar Natural deriving (Eq, Ord, Show)
 
+-- a type variable name (also just a natural)
+newtype TypeVarName = TypeVarName Natural deriving (Eq, Ord, Show)
+
 -- a type variable, with its kind and the span where it was introduced.
 data TypeVar = TypeVar
     { tvName :: Natural
