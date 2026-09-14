@@ -44,6 +44,7 @@ library
                     , parser-combinators
                     , corbenic-prelude
     exposed-modules:   Frontend.Diagnostics
+                     , Frontend.Flags
                      , Frontend.Lexer
                      , Frontend.Lexer.Tokenizers
                      , Frontend.Lexer.Types

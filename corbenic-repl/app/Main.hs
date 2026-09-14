@@ -1,5 +1,6 @@
 module Main where
 
+import Frontend.Flags
 import Frontend.IOPipeline
 import System.Console.Haskeline
 
@@ -14,7 +15,7 @@ main = runInputT defaultSettings loop
             Nothing -> pass
             Just ":q" -> pass
             Just (':' : 'l' : ' ' : toLex) -> do
-                mToks <- ioLex "<stdin>" toLex
+                mToks <- ioLex defaultFFlags "<stdin>" toLex
                 case mToks of
                     Nothing -> loop
                     Just toks -> putTextLn (prettyPrint toks) >> loop

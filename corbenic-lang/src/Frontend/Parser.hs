@@ -20,6 +20,7 @@ import Syntax.Identifier
 import Syntax.Location
 import Syntax.Surface
 import Syntax.Token
+import Frontend.Flags (FrontendFlags)
 
 -- an identifier (will allow primitives, illegally placed primitives are rejected by TC)
 parseIdentifier :: Parser (Located Identifier)
@@ -41,8 +42,8 @@ parseIdentifier = do
 -- full module
 parseModule :: Parser (SurfaceModule Span)
 parseModule = do
-    termFix <- termFixity
-    typeFix <- typeFixity
+    termFix <- askFor termFixity
+    typeFix <- askFor typeFixity
     dc <- optional parseDocComment
     tok_ TokModule
     nm <- parseModulePath
@@ -138,7 +139,7 @@ parseSurfaceExpr = do
 -- the infix/unary pratt level for terms
 parseExprPratt :: Parser (SurfaceExpr Span)
 parseExprPratt = do
-    fixity <- termFixity
+    fixity <- askFor termFixity
     let table = mkTermOperatorTable fixity
     if null table
         then parseApplication
@@ -199,7 +200,7 @@ parseSELiteral = SELiteral <$> literal
 -- an identifier used as an expression
 parseSEIdentifier :: Parser (SurfaceExpr Span)
 parseSEIdentifier = do
-    fixity <- termFixity
+    fixity <- askFor termFixity
     let FixityEnv m = fixity
     Annotated sp t <-
         satisfy
@@ -309,7 +310,7 @@ parseSEOpSectionR = do
 -- a single infix operator (a binary operator from the term fixity env).
 parseInfixOp :: Parser (Annotated Span Identifier)
 parseInfixOp = do
-    fixity <- termFixity
+    fixity <- askFor termFixity
     let FixityEnv m = fixity
         binaryOps = [ident | (ident, f) <- M.assocs m, isBinary f]
     t <-
@@ -401,7 +402,7 @@ parseSurfaceType = do
   where
     parseTypeBody :: Parser (SurfaceType Span)
     parseTypeBody = do
-        fixity <- typeFixity
+        fixity <- askFor typeFixity
         let table = mkTypeOperatorTable fixity
         if null table
             then parseSTApp
@@ -795,12 +796,17 @@ defaultTypeFixityEnv = FixityEnv (one (IdentRaw "→", RightAssocBinary 5))
 -- ENTRY POINT
 ---------------------------------------------
 
-parse :: [Located Token] -> Either ParseError (SurfaceModule Span, [ParseWarning])
-parse toks = do
+parse :: FrontendFlags -> [Located Token] -> Either ParseError (SurfaceModule Span, [ParseWarning])
+parse feFlags toks = do
     let (termFix, typeFix) = collectFixities toks
+    let pState = ParserState {
+        _termFixity = termFix,
+        _typeFixity = defaultTypeFixityEnv <> typeFix,
+        _flags = feFlags
+    }
     (m, _, warns) <-
         first bundleToParseError $
-            runParser (runRWST parseModule (termFix, defaultTypeFixityEnv <> typeFix) ()) "" toks
+            runParser (runRWST parseModule pState ()) "" toks
     pure (m, warns)
   where
     bundleToParseError :: ParseErrorBundle [Located Token] Void -> ParseError

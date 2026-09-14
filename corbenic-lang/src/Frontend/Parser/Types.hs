@@ -3,22 +3,25 @@ module Frontend.Parser.Types where
 import Control.Monad.RWS.Strict (RWST, tell)
 import Text.Megaparsec hiding (ParseError, Token, many, some)
 
+import Control.Lens
 import Frontend.Diagnostics
+import Frontend.Flags
 import Syntax.Fixity
 import Syntax.Location
 import Syntax.Token
 
--- parser monad
-type Parser = RWST (FixityEnv, FixityEnv) [ParseWarning] () (Parsec Void [Located Token])
+-- parser monad and state
+data ParserState = ParserState
+    { _termFixity :: FixityEnv
+    , _typeFixity :: FixityEnv
+    , _flags :: FrontendFlags
+    }
+makeLenses ''ParserState
+
+type Parser = RWST ParserState [ParseWarning] () (Parsec Void [Located Token])
 
 warn :: ParseWarning -> Parser ()
 warn = tell . one
-
-termFixity :: Parser FixityEnv
-termFixity = asks fst
-
-typeFixity :: Parser FixityEnv
-typeFixity = asks snd
 
 data ParseError = ParseError Span ParseErrorKind
     deriving (Eq, Ord, Show)

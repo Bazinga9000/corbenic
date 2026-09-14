@@ -1,6 +1,7 @@
 module Tests.Cases where
 
 import Data.FileEmbed (embedFileRelative)
+import Frontend.Flags
 import Frontend.Lexer
 import Frontend.Parser (parse)
 import Frontend.Parser.Types (ParseError (..), ParseErrorKind (..))
@@ -14,11 +15,20 @@ data TestOutcome
     | ParseE ParseErrorKind
     deriving (Eq, Show)
 
+testFlags :: FrontendFlags
+testFlags =
+    FrontendFlags
+        { _fNoImplicitPrelude = True
+        , _fExperimental = False
+        , _fWarnError = False
+        , _fAllowOrphans = False
+        }
+
 runCase :: TestOutcome -> String -> Assertion
 runCase expected src = do
     outcome <- case scanTokens src of
         Left (LexError _ k) -> pure (LexE k)
-        Right (toks, _) -> case parse toks of
+        Right (toks, _) -> case parse testFlags toks of
             Left (ParseError _ k) -> pure (ParseE k)
             Right _ -> pure Okay
     expected @?= outcome
