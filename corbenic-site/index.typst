@@ -46,8 +46,6 @@ In Corbenic, most predefined functions and operators are single Unicode glyphs. 
 - An identifier can consist of *any* string of non-reserved non-quoting characters surrounded by a pair of *quoting characters*. Most quoting brackets have specific purposes, and all quoting brackets are reserved:
   - The ornate brackets `﴾` and `﴿` are used to refer to identifiers that are Corbenic primitives. Defining your own is not permitted, and which primitives are avaliable will depend on the backend of choice (though most will be avaliable everywhere). Note that these make meaningfully different identifiers: `﴾x﴿` and `x` are not the same.
     - Example: `﴾+ℤℤ﴿`, the primitive for addition of integers.
-  - The angle brackets `〈` and `〉` are used to mark that an identifier is a *type variable* for use in type applications.
-    - Example: `〈ℕ〉`, for type application of the type of natural numbers.
   - Guillemets `«` and `»` are used for two general purposes:
     - To explicitly mark that the containing characters should be treated as a single identifier.
       - Example: `«+++»` is a single identifier, `+++` is a sequence of three instances of `+` (and will fail at parse time).
@@ -214,3 +212,14 @@ If you wish to re-export this module, you need to specify that with the reserved
 ⇱ Foo.Bar
 ```
 which will by default re-export all bindings from that module which were imported. This set can be restricted further using the same block format as used when importing a module.
+
+= The Type System
+
+Corbenic's type system has the following features for both richness and quality of life. Several of these are based on their equivalent Haskell extensions, but are turned on by default:
+
+== Type Lambdas and Applications
+
+The language has first class type lambdas and type aplications. To write a type lambda, use the reserved capital lambda: `Λτ. <body>`. Within the body of this expression, `τ` will be avaliable as a type variable.
+
+To apply a type, wrap it in angle brackets `〈` and `〉`. This is not restricted to explicitly defined type lambdas. You can also use this to constrain the types of polymorphic functions or typeclass methods (the latter is quite useful if type inference can't determine which type you're referring to).
+  - Example: If you wish to restrict the type of the identity function so that it will only work on natural numbers, you may write `𝟏 〈ℕ〉` which will have type `ℕ → ℕ`.
