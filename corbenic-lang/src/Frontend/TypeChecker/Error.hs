@@ -11,6 +11,7 @@ data TypeCheckerError = TypeCheckerError Span TypeCheckerErrorKind
 data TypeCheckerErrorKind
     = TCUnboundIdentifier Identifier
     | TCUnboundTypeConstructor Identifier
+    | TCUnboundClass Identifier
     | TCCouldNotUnify CorbenicType CorbenicType
     | TCInfiniteType TypeVar CorbenicType
     | TCMissingInstance Pred
@@ -25,6 +26,7 @@ data TypeCheckerErrorKind
 instance Pretty TypeCheckerErrorKind where
     prettyPrint (TCUnboundIdentifier i) = "Unbound type-level identifier: " <> prettyPrint i
     prettyPrint (TCUnboundTypeConstructor ctor) = "Unbound type constructor: " <> prettyPrint ctor
+    prettyPrint (TCUnboundClass cls) = "Unbound class: " <> prettyPrint cls
     prettyPrint (TCCouldNotUnify t1 t2) = "Could not unify: " <> prettyPrint t1 <> " and " <> prettyPrint t2
     prettyPrint (TCInfiniteType a b) = "Infinite type: " <> prettyPrint a <> " occurs in " <> prettyPrint b
     prettyPrint (TCMissingInstance predicate) = "Missing instance: " <> prettyPrint predicate

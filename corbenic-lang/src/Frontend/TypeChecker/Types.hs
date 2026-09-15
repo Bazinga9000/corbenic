@@ -62,7 +62,7 @@ data CorbenicType
     | CTPrim Span PrimType -- builtin primitive type
     | CTApp Span CorbenicType CorbenicType -- application
     | CTTuple Span [CorbenicType] -- (a, b, c)
-    | CTPred Span Pred -- a constraint in type position
+    | CTPred Span [Pred] -- a constraint context in type position
     | CTForall Span TypeVar CorbenicType -- ∀x. τ
     | CTExists Span TypeVar CorbenicType -- ∃x. τ
     | CTConstrained Span [Pred] CorbenicType -- C a ⇒ τ (no quantification)
@@ -105,17 +105,6 @@ data InstanceDef = InstanceDef
     }
 
 type ConstraintAlias = [Pred]
-
--- the type checker environment
-data TcEnv = TcEnv
-    { tcTerms :: Map Identifier Scheme -- term values (incl. constructors)
-    , tcTyCons :: Map Identifier CorbenicKind -- type constructors in scope
-    , tcClasses :: Map Identifier ClassDef
-    , tcInstances :: Map Identifier [InstanceDef] -- by class name
-    , tcAliases :: Map Identifier ([TypeVar], CorbenicType) -- type aliases (expanded on use)
-    , tcConstraintAliases :: Map Identifier ConstraintAlias
-    , tcTypeVars :: [TypeVar] -- locally bound type variables
-    }
 
 instance HasSpan TypeVar where
     spanOf = tvSpan
@@ -183,7 +172,7 @@ instance Pretty CorbenicType where
         atom t@(CTConstrained _ _ _) = "(" <> prettyPrint t <> ")"
         atom t = prettyPrint t
     prettyPrint (CTTuple _ ts) = "(" <> T.intercalate ", " (map prettyPrint ts) <> ")"
-    prettyPrint (CTPred _ p) = prettyPrint p
+    prettyPrint (CTPred _ ps) = T.intercalate ", " (map prettyPrint ps)
     prettyPrint (CTForall _ tv t) = "∀" <> prettyPrint tv <> ". " <> prettyPrint t
     prettyPrint (CTExists _ tv t) = "∃" <> prettyPrint tv <> ". " <> prettyPrint t
     prettyPrint (CTConstrained _ ps t) = T.intercalate ", " (map prettyPrint ps) <> " ⇒ " <> prettyPrint t

@@ -53,6 +53,8 @@ library
                      , Frontend.Parser.Fixity
                      , Frontend.Parser.Types
                      , Frontend.TypeChecker.Types
+                     , Frontend.TypeChecker.Tc
+                     , Frontend.TypeChecker.Realize
                      , Frontend.TypeChecker.Error
                      , Frontend.TypeChecker.Seed
                      , Frontend.TypeChecker.Subst
