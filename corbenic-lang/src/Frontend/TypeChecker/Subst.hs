@@ -28,6 +28,9 @@ deleteSubst tv (Subst s) = Subst $ M.delete tv s
 deleteManySubst :: [TypeVar] -> Subst -> Subst
 deleteManySubst tvs s = foldr deleteSubst s tvs
 
+extendSubst :: TypeVar -> CorbenicType -> Subst -> Subst
+extendSubst tv ty (Subst s) = Subst $ M.insert tv ty s
+
 class Substitutable a where
     apply :: Subst -> a -> a
     ftv :: a -> Set TypeVar
