@@ -17,7 +17,7 @@ In Haskell, there's a composition operator `(.)`. It has type `(b → c) → (a 
 Corbenic *also* has a composition operator, it's called `«∘»`. However, if you investigate the type of `«∘»`, what you will find is not the same:
 
 ```
-«∘» ⠛ Semigroupoid c ⇒ c t₂ t₃ → c t₁ t₂ → c t₁ t₃
+«∘» ⠛ ∀c t₁ t₂ t₃. Semigroupoid c ⇒ c t₂ t₃ → c t₁ t₂ → c t₁ t₃
 ```
 
 This is *much* more abstract, but if you dig into the category theory, it is indeed simply a generalization of Haskell's operator! `Semigroupoid` is the class of types that support an associative composition in this way, so why not? Why shouldn't the "fundamental" glyph do both?
@@ -76,7 +76,8 @@ In Corbenic, most predefined functions and operators are single Unicode glyphs. 
 Corbenic has multiple types of declarations. To distinguish between declarations, different binding symbols are used.
 
 - *Term declarations* are made using the `≔` symbol, which is reserved. `x ≔ 2` is a term declaration.
-- *Type annotations* are written using the reserved symbol `⠛`. A type annotation for a declaration must be on the line immediately preceeding the declaration: `x ⠛ ℤ` on its own line, then `x ≔ …` below. Within a type expression itself, `⠛` is used infix as usual (`⦿⌟₆ + ⠛ x → x → x`), and constraint notation (`x ⋹ Additive ⇒ …`) may appear anywhere a type can.
+- *Type annotations* are written using the reserved symbol `⠛`. A type annotation for a declaration must be on the line immediately preceeding the declaration: `x ⠛ ℤ` on its own line, then `x ≔ …` below. Within a type expression itself, `⠛` is used infix as usual (`⦿⌟₆ + ⠛ ∀x. x → x → x`), and constraint notation (`x ⋹ Additive ⇒ …`) may appear anywhere a type can.
+  - Type variables are never implicit. It is forbidden to write `f ⠛ x → x → x`, you must either explicit qualify it with `∀`: `f ⠛ ∀x. x → x → x` or include it as a parameter in your declaration.
 - *Typeclass declarations* are made using the symbol `⇒`.
   - Constraints can be written in a standard form, such as `(Functor x, Foldable x) ⇒ Traversable x`, or they can be written in a set-algebra like form, as follows: `x ⋹ Functor ⋒ Foldable`.
   - Typeclasses with no constraints are declared with nothing before `⇒`. For example, `⇒ Magma x` on its own line is a legal typeclass definition.
@@ -110,7 +111,7 @@ The following are the full definitions of the `Additive` and `Multiplicative` ty
   ① ⠛ x
 ```
 
-Note that if you inspect the type of `+` in the REPL with `:i +`, you will see its type and fixity as `⦿⌟₆ + ⠛ x ⋹ Additive ⇒ x → x → x`. The implicit constraint is made explicit.
+Note that if you inspect the type of `+` in the REPL with `:i +`, you will see its type and fixity as `⦿⌟₆ + ⠛ ∀x. x ⋹ Additive ⇒ x → x → x`. The implicit constraint is made explicit.
 
 = Comments
 
