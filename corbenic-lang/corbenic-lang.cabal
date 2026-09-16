@@ -58,6 +58,7 @@ library
                      , Frontend.TypeChecker.Error
                      , Frontend.TypeChecker.Seed
                      , Frontend.TypeChecker.Subst
+                     , Frontend.TypeChecker.Unify
                      , Frontend.IOPipeline
                      , Syntax.Chars
                      , Syntax.Documentation
