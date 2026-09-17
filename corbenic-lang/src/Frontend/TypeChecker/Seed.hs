@@ -12,6 +12,7 @@ primitiveSeed =
         , (IdentRaw "ℕ", PNatural)
         , (IdentQuoted "ℕ𐞄₃₂", PNatural32)
         , (IdentRaw "ℝ", PReal)
+        , (IdentRaw "⫽", PRatio)
         , (IdentRaw "𝔹", PBool)
         , (IdentRaw "𝟙", PUnit)
         , (IdentRaw "𝕋", PText)
@@ -28,6 +29,7 @@ primKind PInteger32 = CKStar
 primKind PNatural = CKStar
 primKind PNatural32 = CKStar
 primKind PReal = CKStar
+primKind PRatio = CKArr CKStar CKStar
 primKind PBool = CKStar
 primKind PUnit = CKStar
 primKind PText = CKStar

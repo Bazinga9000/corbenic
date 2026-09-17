@@ -50,6 +50,7 @@ data PrimType
     | PNatural -- ℕ
     | PNatural32 -- ℕ𐞄₃₂
     | PReal -- ℝ (internally 64 bit double)
+    | PRatio -- ⫽
     | PBool -- 𝔹
     | PUnit -- 𝟙
     | PText -- 𝕋
@@ -157,6 +158,7 @@ instance Pretty PrimType where
     prettyPrint PNatural = "ℕ"
     prettyPrint PNatural32 = "ℕ𐞄₃₂"
     prettyPrint PReal = "ℝ"
+    prettyPrint PRatio = "⫽"
     prettyPrint PBool = "𝔹"
     prettyPrint PUnit = "𝟙"
     prettyPrint PText = "𝕋"
