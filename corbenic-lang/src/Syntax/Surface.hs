@@ -1,5 +1,6 @@
 module Syntax.Surface where
 
+import Control.Lens (Lens', lens)
 import Syntax.Documentation
 import Syntax.Fixity
 import Syntax.Identifier (Identifier)
@@ -53,6 +54,46 @@ data SurfaceExpr ann
     | SEInfix ann (SurfaceExpr ann) (Annotated ann Identifier) (SurfaceExpr ann) -- 2+2
     | SEAnnotation ann (SurfaceExpr ann) (SurfaceType ann) -- inline type annotation
     | SEHole ann
+
+-- a lens to more easily get expression annotations
+exprAnn :: Lens' (SurfaceExpr ann) ann
+exprAnn = lens getAnn setAnn
+  where
+    getAnn (SELiteral (Annotated a _)) = a
+    getAnn (SEIdentifier (Annotated a _)) = a
+    getAnn (SELambda a _ _) = a
+    getAnn (SEApp a _ _) = a
+    getAnn (SETypeLambda a _ _) = a
+    getAnn (SETypeApp a _ _) = a
+    getAnn (SEWhere a _ _) = a
+    getAnn (SEDo a _) = a
+    getAnn (SECase a _ _) = a
+    getAnn (SELambdaCase a _) = a
+    getAnn (SEList a _) = a
+    getAnn (SETuple a _) = a
+    getAnn (SEOpSectionL a _ _) = a
+    getAnn (SEOpSectionR a _ _) = a
+    getAnn (SEInfix a _ _ _) = a
+    getAnn (SEAnnotation a _ _) = a
+    getAnn (SEHole a) = a
+
+    setAnn (SELiteral (Annotated _ l)) a = SELiteral (Annotated a l)
+    setAnn (SEIdentifier (Annotated _ i)) a = SEIdentifier (Annotated a i)
+    setAnn (SELambda _ x b) a = SELambda a x b
+    setAnn (SEApp _ f x) a = SEApp a f x
+    setAnn (SETypeLambda _ x b) a = SETypeLambda a x b
+    setAnn (SETypeApp _ e t) a = SETypeApp a e t
+    setAnn (SEWhere _ e ws) a = SEWhere a e ws
+    setAnn (SEDo _ is) a = SEDo a is
+    setAnn (SECase _ e bs) a = SECase a e bs
+    setAnn (SELambdaCase _ bs) a = SELambdaCase a bs
+    setAnn (SEList _ es) a = SEList a es
+    setAnn (SETuple _ es) a = SETuple a es
+    setAnn (SEOpSectionL _ e i) a = SEOpSectionL a e i
+    setAnn (SEOpSectionR _ i e) a = SEOpSectionR a i e
+    setAnn (SEInfix _ l i r) a = SEInfix a l i r
+    setAnn (SEAnnotation _ e t) a = SEAnnotation a e t
+    setAnn (SEHole _) a = SEHole a
 
 data SurfaceBranch ann = SurfaceBranch
     { sbAnn :: ann
