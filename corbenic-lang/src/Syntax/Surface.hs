@@ -35,13 +35,14 @@ data ImportSpec ann
 -- things explicitly not here that might be surprising:
 -- SIf - conditionals are done by the `?` glyph, which is `Bool -> a -> a -> a` (in the Prelude)
 -- SLet - the preferred abstraction for binding is the where block
+-- explicitly written types are Span only, not annotated with ann since they're almost immediately erased and don't need any more annotations
 data SurfaceExpr ann
     = SELiteral (Annotated ann Literal) -- 2
     | SEIdentifier (Annotated ann Identifier) -- x
     | SELambda ann (Annotated ann Identifier) (SurfaceExpr ann) -- λx ↦ foo
     | SEApp ann (SurfaceExpr ann) (SurfaceExpr ann) -- f x
     | SETypeLambda ann (Annotated ann Identifier) (SurfaceExpr ann) -- Λx ↦ foo
-    | SETypeApp ann (SurfaceExpr ann) (SurfaceType ann) -- f 〈x〉
+    | SETypeApp ann (SurfaceExpr ann) (SurfaceType Span) -- f 〈x〉
     --  | SEPack ann (SurfaceType ann) (SurfaceExpr ann) -- 《witness type, term》
     | SEWhere ann (SurfaceExpr ann) [SurfaceWhereDeclaration ann] -- expr with a where block
     | SEDo ann (NonEmpty (SurfaceDoInstruction ann)) -- 🝣 \n foo ≔ bar \n baz ↤ quux \n bep
@@ -52,7 +53,7 @@ data SurfaceExpr ann
     | SEOpSectionL ann (SurfaceExpr ann) (Annotated ann Identifier) -- (3+)
     | SEOpSectionR ann (Annotated ann Identifier) (SurfaceExpr ann) -- (+3)
     | SEInfix ann (SurfaceExpr ann) (Annotated ann Identifier) (SurfaceExpr ann) -- 2+2
-    | SEAnnotation ann (SurfaceExpr ann) (SurfaceType ann) -- inline type annotation
+    | SEAnnotation ann (SurfaceExpr ann) (SurfaceType Span) -- inline type annotation
     | SEHole ann
 
 -- a lens to more easily get expression annotations
