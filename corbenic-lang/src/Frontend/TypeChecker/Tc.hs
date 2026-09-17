@@ -12,7 +12,30 @@ import Syntax.Location
 import Data.Map qualified as M
 
 -- the type checker monad
-type Tc a = RWST TcEnv [Pred] TcState (Except TypeCheckerError) a
+type Tc a = RWST TcEnv TcWriter TcState (Except TypeCheckerError) a
+
+-- the type checker **writer**
+-- logs warnings, also logs constraints for later solving
+data TcWriter = TcWriter
+    { twPreds :: [Pred]
+    , twWarnings :: [TypeCheckerWarning]
+    }
+
+instance Semigroup TcWriter where
+    TcWriter p1 w1 <> TcWriter p2 w2 = TcWriter (p1 <> p2) (w1 <> w2)
+
+instance Monoid TcWriter where
+    mempty = TcWriter [] []
+
+tellPreds :: [Pred] -> Tc ()
+tellPreds ps = tell (TcWriter ps [])
+
+warn :: TypeCheckerWarning -> Tc ()
+warn w = tell (TcWriter [] [w])
+
+-- clear only the constraints (for the letrec/generalize pattern), keeping warnings
+censorPreds :: Tc a -> Tc a
+censorPreds = censor (\w -> w { twPreds = [] })
 
 -- the type checker **state**
 data TcState = TcState
