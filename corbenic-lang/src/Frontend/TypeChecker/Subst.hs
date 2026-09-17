@@ -40,8 +40,8 @@ instance (Substitutable a, Functor f, Foldable f) => Substitutable (f a) where
     ftv as = fold $ fmap ftv as
 
 instance Substitutable CorbenicType where
+    apply _ t@(CTVar (TypeVar (Rigid _) _ _)) = t
     apply s t@(CTVar tvar) = lookupSubstDefault t s tvar
-    apply _ t@(CTRigid _) = t
     apply _ t@(CTCon _ _) = t
     apply _ t@(CTFam _ _) = t
     apply _ t@(CTPrim _ _) = t
@@ -53,7 +53,6 @@ instance Substitutable CorbenicType where
     apply s (CTConstrained spn preds ty) = CTConstrained spn (apply s preds) (apply s ty)
 
     ftv (CTVar tv) = one tv
-    ftv (CTRigid tv) = one tv
     ftv (CTCon _ _) = mempty
     ftv (CTFam _ _) = mempty
     ftv (CTPrim _ _) = mempty

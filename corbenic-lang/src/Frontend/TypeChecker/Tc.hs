@@ -37,33 +37,32 @@ data TcEnv = TcEnv
 makeLenses ''TcState
 makeLenses ''TcEnv
 
--- spawn a fresh typeVar (for use in metavariables)
-freshTypeVar :: Span -> CorbenicKind -> Tc TypeVar
-freshTypeVar sp k = do
-    n <- use metaN
-    metaN %= (+ 1)
+-- generate a fresh name by incrementing a lens and applying a ctor
+freshName :: (Natural -> TypeVarName) -> (Lens' TcState Natural) -> Tc TypeVarName
+freshName ctor l = ctor <$> ((l %= (+1)) *> use l)
+
+-- spawn a fresh typeVar
+freshVar :: (Natural -> TypeVarName) -> (Lens' TcState Natural) -> Span -> CorbenicKind -> Tc TypeVar
+freshVar ctor l sp k = do
+    mn <- freshName ctor l
     return $
         TypeVar
-            { tvName = n
+            { tvName = mn
             , tvSpan = sp
             , tvKind = k
             }
 
--- spawn a frsh metavariable
+-- spawn a fresh metavariable TVar
+freshMetavarTV :: Span -> CorbenicKind -> Tc TypeVar
+freshMetavarTV sp k = freshVar Metavar metaN sp k
+
+-- spawn a fresh metavariable CorbenicType
 freshMetavar :: Span -> CorbenicKind -> Tc CorbenicType
-freshMetavar s k = CTVar <$> freshTypeVar s k
+freshMetavar sp k = CTVar <$> freshMetavarTV sp k
 
--- spawn a fresh rigid / skolem
+-- spawn a fresh rigid / skolem CorbenicType
 freshRigid :: Span -> CorbenicKind -> Tc CorbenicType
-freshRigid sp k = do
-    n <- use rigidN
-    rigidN %= (+ 1)
-    return . CTRigid $
-        TypeVar
-            { tvName = n
-            , tvSpan = sp
-            , tvKind = k
-            }
+freshRigid sp k = CTVar <$> freshVar Rigid rigidN sp k
 
 -- spawn a fresh kind variable
 freshKind :: Tc CorbenicKind
@@ -76,6 +75,6 @@ freshKind = do
 bindToTVar :: Annotated Span Identifier -> Tc a -> Tc (TypeVar, a)
 bindToTVar (Annotated bsp ident) t = do
     k <- freshKind
-    tv <- freshTypeVar bsp k
+    tv <- freshMetavarTV bsp k
     a <- local (\rho -> rho & tcTypeVars %~ M.insert ident tv) t
     return $ (tv, a)

@@ -19,15 +19,23 @@ data CorbenicKind
 newtype KindVar = KindVar Natural deriving (Eq, Ord, Show)
 
 -- a type variable name (also just a natural)
-newtype TypeVarName = TypeVarName Natural deriving (Eq, Ord, Show)
+-- either a normal metavar or a rigid/skolem (which can't be unificed)
+data TypeVarName = Metavar Natural | Rigid Natural  deriving (Eq, Ord, Show)
 
 -- a type variable, with its kind and the span where it was introduced.
 data TypeVar = TypeVar
-    { tvName :: Natural
+    { tvName :: TypeVarName
     , tvSpan :: Span
     , tvKind :: CorbenicKind
     }
     deriving (Show)
+
+isRigid :: TypeVar -> Bool
+isRigid (TypeVar (Rigid _) _ _) = True
+isRigid _ = False
+
+isMetavar :: TypeVar -> Bool
+isMetavar = not . isRigid
 
 instance Eq TypeVar where
     TypeVar n _ _ == TypeVar m _ _ = n == m
@@ -55,8 +63,7 @@ data PrimType
 -- every node carries the span of the surface fragment it came from
 -- (synthesized nodes carry the span of the expression being typed)
 data CorbenicType
-    = CTVar TypeVar -- unification variable
-    | CTRigid TypeVar -- skolem (can't be bound)
+    = CTVar TypeVar -- type variable (either unification or skolem)
     | CTCon Span Identifier -- user type constructor
     | CTFam Span Identifier -- type family / associated type
     | CTPrim Span PrimType -- builtin primitive type
@@ -111,7 +118,6 @@ instance HasSpan TypeVar where
 
 instance HasSpan CorbenicType where
     spanOf (CTVar tv) = spanOf tv
-    spanOf (CTRigid tv) = spanOf tv
     spanOf (CTCon sp _) = sp
     spanOf (CTFam sp _) = sp
     spanOf (CTPrim sp _) = sp
@@ -127,8 +133,12 @@ instance HasSpan Pred where
     spanOf (Equal sp _ _) = sp
     spanOf (Quintessable sp _ _) = sp
 
+instance Pretty TypeVarName where
+    prettyPrint (Metavar n) = "t" <> mkSubscript n
+    prettyPrint (Rigid n) = "rt" <> mkSubscript n
+
 instance Pretty TypeVar where
-    prettyPrint (TypeVar n _ _) = "t" <> mkSubscript n
+    prettyPrint (TypeVar n _ _) = prettyPrint n
 
 instance Pretty KindVar where
     prettyPrint (KindVar n) = "k" <> mkSubscript n
@@ -157,7 +167,6 @@ instance Pretty PrimType where
 
 instance Pretty CorbenicType where
     prettyPrint (CTVar tv) = prettyPrint tv
-    prettyPrint (CTRigid tv) = "r" <> prettyPrint tv
     prettyPrint (CTCon _ i) = prettyPrint i
     prettyPrint (CTFam _ i) = prettyPrint i
     prettyPrint (CTPrim _ p) = prettyPrint p
