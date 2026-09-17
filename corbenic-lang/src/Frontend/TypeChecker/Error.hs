@@ -14,6 +14,7 @@ data TypeCheckerErrorKind
     | TCUnboundClass Identifier
     | TCCouldNotUnify CorbenicType CorbenicType
     | TCInfiniteType TypeVar CorbenicType
+    | TCIllegalTypeApp CorbenicType
     | TCMissingInstance Pred
     | TCAmbiguousType CorbenicType
     | TCAmbiguousTypeVar TypeVar Pred
@@ -29,6 +30,7 @@ instance Pretty TypeCheckerErrorKind where
     prettyPrint (TCUnboundClass cls) = "Unbound class: " <> prettyPrint cls
     prettyPrint (TCCouldNotUnify t1 t2) = "Could not unify: " <> prettyPrint t1 <> " and " <> prettyPrint t2
     prettyPrint (TCInfiniteType a b) = "Infinite type: " <> prettyPrint a <> " occurs in " <> prettyPrint b
+    prettyPrint (TCIllegalTypeApp t) = "Type application applied to expression of illegal type " <> prettyPrint t
     prettyPrint (TCMissingInstance predicate) = "Missing instance: " <> prettyPrint predicate
     prettyPrint (TCAmbiguousType t) = "Ambiguous type: " <> prettyPrint t
     prettyPrint (TCAmbiguousTypeVar tv predicate) = "Ambiguous type variable " <> prettyPrint tv <> " in " <> prettyPrint predicate
