@@ -46,10 +46,10 @@ realize st = case isHigherRank st of
         (STFun sp t1 t2) -> do
             t1' <- realize t1
             t2' <- realize t2
-            return (CTApp sp (CTApp sp (CTPrim sp PFunction) t1') t2')
+            return $ mkFun sp t1' t2'
         (STList sp t) -> do
             t' <- realize t
-            return (CTApp sp (CTPrim sp PList) t')
+            return $ mkList sp t'
         (STTuple sp tys) -> do
             tys' <- mapM realize tys
             return $ CTTuple sp (toList tys')

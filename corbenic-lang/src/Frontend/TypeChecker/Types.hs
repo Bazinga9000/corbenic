@@ -76,6 +76,13 @@ data CorbenicType
     | CTConstrained Span [Pred] CorbenicType -- C a ⇒ τ (no quantification)
     deriving (Eq, Show, Ord)
 
+-- helpers to make common types
+mkFun :: Span -> CorbenicType -> CorbenicType -> CorbenicType
+mkFun sp a b = CTApp sp (CTApp sp (CTPrim sp PFunction) a) b
+
+mkList :: Span -> CorbenicType -> CorbenicType
+mkList sp a = CTApp sp (CTPrim sp PList) a
+
 -- a typeclass constraint (or a magical equivalent)
 data Pred
     = Pred Span Identifier [CorbenicType] -- C a b
