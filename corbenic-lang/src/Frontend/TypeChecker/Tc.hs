@@ -83,9 +83,13 @@ freshMetavarTV sp k = freshVar Metavar metaN sp k
 freshMetavar :: Span -> CorbenicKind -> Tc CorbenicType
 freshMetavar sp k = CTVar <$> freshMetavarTV sp k
 
+-- spawn a fresh rigid TVar
+freshRigidTV :: Span -> CorbenicKind -> Tc TypeVar
+freshRigidTV sp k = freshVar Rigid rigidN sp k
+
 -- spawn a fresh rigid / skolem CorbenicType
 freshRigid :: Span -> CorbenicKind -> Tc CorbenicType
-freshRigid sp k = CTVar <$> freshVar Rigid rigidN sp k
+freshRigid sp k = CTVar <$> freshRigidTV sp k
 
 -- spawn a fresh kind variable
 freshKind :: Tc CorbenicKind
@@ -99,5 +103,13 @@ bindToTVar :: Annotated Span Identifier -> Tc a -> Tc (TypeVar, a)
 bindToTVar (Annotated bsp ident) t = do
     k <- freshKind
     tv <- freshMetavarTV bsp k
-    a <- local (\rho -> rho & tcTypeVars %~ M.insert ident tv) t
+    a <- local (over tcTypeVars (M.insert ident tv)) t
+    return $ (tv, a)
+
+-- locally bind an identifier to a fresh rigid variable within a given typechecker computation
+bindToRigid :: Annotated Span Identifier -> Tc a -> Tc (TypeVar, a)
+bindToRigid (Annotated bsp ident) t = do
+    k <- freshKind
+    tv <- freshRigidTV bsp k
+    a <- local (over tcTypeVars (M.insert ident tv)) t
     return $ (tv, a)
