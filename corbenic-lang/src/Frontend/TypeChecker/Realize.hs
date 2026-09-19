@@ -52,7 +52,7 @@ realize st = case isHigherRank st of
             return $ mkList sp t'
         (STTuple sp tys) -> do
             tys' <- mapM realize tys
-            return $ CTTuple sp (toList tys')
+            return $ CTTuple sp tys'
         (STConstraint sp ctx) -> do
             preds <- realizeContext ctx
             pure (CTPred sp preds)

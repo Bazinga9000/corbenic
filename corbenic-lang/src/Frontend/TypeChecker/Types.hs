@@ -69,7 +69,7 @@ data CorbenicType
     | CTFam Span Identifier -- type family / associated type
     | CTPrim Span PrimType -- builtin primitive type
     | CTApp Span CorbenicType CorbenicType -- application
-    | CTTuple Span [CorbenicType] -- (a, b, c)
+    | CTTuple Span (NonEmpty CorbenicType) -- (a, b, c)
     | CTPred Span [Pred] -- a constraint context in type position
     | CTForall Span TypeVar CorbenicType -- ∀x. τ
     | CTExists Span TypeVar CorbenicType -- ∃x. τ
@@ -189,7 +189,7 @@ instance Pretty CorbenicType where
         atom t@(CTExists _ _ _) = "(" <> prettyPrint t <> ")"
         atom t@(CTConstrained _ _ _) = "(" <> prettyPrint t <> ")"
         atom t = prettyPrint t
-    prettyPrint (CTTuple _ ts) = "(" <> T.intercalate ", " (map prettyPrint ts) <> ")"
+    prettyPrint (CTTuple _ ts) = "(" <> T.intercalate ", " (map prettyPrint (toList ts)) <> ")"
     prettyPrint (CTPred _ ps) = T.intercalate ", " (map prettyPrint ps)
     prettyPrint (CTForall _ tv t) = "∀" <> prettyPrint tv <> ". " <> prettyPrint t
     prettyPrint (CTExists _ tv t) = "∃" <> prettyPrint tv <> ". " <> prettyPrint t

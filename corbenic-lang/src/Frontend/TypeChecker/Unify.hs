@@ -33,7 +33,7 @@ unify' (CTCon _ a) (CTCon _ b) | a == b = pass
 unify' (CTFam _ a) (CTFam _ b) | a == b = pass
 unify' (CTPrim _ a) (CTPrim _ b) | a == b = pass
 unify' (CTApp _ f x) (CTApp _ f' x') = unify f f' *> unify x x'
-unify' (CTTuple _ as) (CTTuple _ as') | length as == length as' = zipWithM_ unify as as'
+unify' (CTTuple _ as) (CTTuple _ as') | length as == length as' = zipWithM_ unify (toList as) (toList as')
 unify' (CTPred _ preds) (CTPred _ _) = throwError $ rankNError $ fromJust $ viaNonEmpty head preds
 unify' (CTForall _ q1 _) (CTForall _ _ _) = throwError $ rankNError q1
 unify' (CTExists _ q1 _) (CTExists _ _ _) = throwError $ rankNError q1
