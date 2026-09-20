@@ -130,7 +130,7 @@ data SurfaceTypeConstructor ann = SurfaceTypeConstructor
     { stcAnn :: ann
     , stcDoc :: Maybe DocComment
     , stcName :: Annotated ann Identifier
-    , stcFields :: [SurfaceType ann]
+    , stcFields :: [SurfaceType Span]
     }
 
 data SurfaceDoInstruction ann
@@ -174,7 +174,7 @@ data SurfaceTypeAlias ann = SurfaceTypeAlias
     , staDoc :: Maybe DocComment
     , staName :: Annotated ann Identifier
     , staParams :: [Annotated ann Identifier]
-    , staBody :: SurfaceType ann
+    , staBody :: SurfaceType Span
     }
 
 data SurfaceConstraintAlias ann = SurfaceConstraintAlias
@@ -189,19 +189,19 @@ data SurfaceAssociatedType ann = SurfaceAssociatedType
     , satDoc :: Maybe DocComment
     , satName :: Annotated ann Identifier
     , satParams :: [Annotated ann Identifier]
-    , satBody :: Maybe (SurfaceType ann)
+    , satBody :: Maybe (SurfaceType Span)
     }
 
 -- declaration contexts (allow certain subsets of them)
 data SurfaceClassMember ann
-    = SCMethod (SurfaceTypeDecl ann) (Maybe (SurfaceTermDecl ann))
+    = SCMethod (SurfaceTypeDecl Span) (Maybe (SurfaceTermDecl ann))
     | SCAssociatedType (SurfaceAssociatedType ann)
 
 data SurfaceWhereDeclaration ann
-    = SWDTerm (Maybe (SurfaceTypeDecl ann)) (SurfaceTermDecl ann)
+    = SWDTerm (Maybe (SurfaceTypeDecl Span)) (SurfaceTermDecl ann)
 
 data SurfaceDeclaration ann
-    = SDTerm (Maybe (SurfaceTypeDecl ann)) (SurfaceTermDecl ann)
+    = SDTerm (Maybe (SurfaceTypeDecl Span)) (SurfaceTermDecl ann)
     | SDClass (SurfaceClassDecl ann)
     | SDInstance (SurfaceInstanceDecl ann)
     | SDData (SurfaceDataDecl ann)
@@ -221,7 +221,7 @@ data SurfaceClassDecl ann = SurfaceClassDecl
 data SurfaceClassApp ann = SurfaceClassApp
     { scappAnn :: ann
     , scappName :: Annotated ann Identifier
-    , scappArgs :: [SurfaceType ann]
+    , scappArgs :: [SurfaceType Span]
     } -- Foo a b c ...
 
 data SurfaceInstanceDecl ann = SurfaceInstanceDecl

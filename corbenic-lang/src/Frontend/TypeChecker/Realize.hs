@@ -12,7 +12,7 @@ import Data.Map qualified as M
 
 -- temporary way to forbid rank n types before we implement them
 -- probably imperfect, but whatever it doesn't have to be perfect
-isHigherRank :: SurfaceType ann -> Bool
+isHigherRank :: SurfaceType Span -> Bool
 isHigherRank t = go (stripSpine t)
   where
     stripSpine (STForall _ _ ty) = stripSpine ty
