@@ -108,3 +108,20 @@ resolveTypeName sp ident = do
                             case cls of
                                 Just _ -> return $ CTPred sp [Pred sp ident []]
                                 Nothing -> throwError $ TypeCheckerError sp (TCUnboundTypeConstructor ident)
+
+
+
+-- realize a type into a scheme (pulling out the relevant quantifiers/skolems)
+-- passes a continuation to run in which everything is bound
+realizeScheme :: SurfaceType Span -> (Scheme -> Tc a) -> Tc (Scheme, a)
+realizeScheme = go [] []
+    where
+        go :: [TypeVar] -> [Pred] -> SurfaceType Span -> (Scheme -> Tc a) -> Tc (Scheme, a)
+        go tvs preds (STForall _ ids ty) k = fmap snd (bindManyRigids (toList ids) $ \skolems -> go (tvs <> skolems) preds ty k)
+        go tvs preds (STConstrained _ ctx ty) k = do
+            ps <- realizeContext ctx
+            go tvs (preds <> ps) ty k
+        go tvs preds ty k = do
+            ty' <- realize ty
+            let scm = Scheme tvs preds ty'
+            k scm >>= return . (scm,)
