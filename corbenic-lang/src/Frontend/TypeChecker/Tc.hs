@@ -114,6 +114,15 @@ bindToRigid (Annotated bsp ident) t = do
     a <- local (over tcTypeVars (M.insert ident tv)) t
     return $ (tv, a)
 
+
+-- bind many rigids at once to fresh metavars in a given typechecker computation (allowed to read the variables)
+bindManyMVars :: [Annotated Span Identifier] -> ([TypeVar] -> Tc a) -> Tc ([TypeVar], a)
+bindManyMVars ((Annotated bsp ident):is) f = do
+    tv <- freshKind >>= freshMetavarTV bsp
+    (tvs', a) <- local (over tcTypeVars (M.insert ident tv)) (bindManyMVars is (f . (tv:)))
+    return (tv:tvs', a)
+bindManyMVars [] f = f [] >>= return . ([],)
+
 -- bind many rigids at once to fresh rigids in a given typechecker computation (allowed to read the variables)
 bindManyRigids :: [Annotated Span Identifier] -> ([TypeVar] -> Tc a) -> Tc ([TypeVar], a)
 bindManyRigids ((Annotated bsp ident):is) f = do

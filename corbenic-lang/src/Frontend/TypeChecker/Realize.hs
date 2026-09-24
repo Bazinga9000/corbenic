@@ -1,14 +1,17 @@
 module Frontend.TypeChecker.Realize where
 
+import Control.Lens
 import Control.Monad.Except
 import Frontend.TypeChecker.Error
 import Frontend.TypeChecker.Seed
 import Frontend.TypeChecker.Tc
 import Frontend.TypeChecker.Types
+import Frontend.TypeChecker.Subst
 import Syntax.Identifier
 import Syntax.Location
 import Syntax.Surface
 import Data.Map qualified as M
+import Data.Set qualified as S
 
 -- temporary way to forbid rank n types before we implement them
 -- probably imperfect, but whatever it doesn't have to be perfect
@@ -111,17 +114,68 @@ resolveTypeName sp ident = do
 
 
 
--- realize a type into a scheme (pulling out the relevant quantifiers/skolems)
--- passes a continuation to run in which everything is bound
+-- realize a type into a *reusable* scheme: leading quantifiers become fresh
+-- metavariables. passes a continuation to run in which the surface
+-- binder names are in scope
 realizeScheme :: SurfaceType Span -> (Scheme -> Tc a) -> Tc (Scheme, a)
-realizeScheme = go [] []
+realizeScheme st k = do
+    (scm, _, a) <- realizeSchemeBinders st k
+    return (scm, a)
+
+-- as realized scheme, but also returns a list of tuples of (quantified identifier, bound metavar)
+realizeSchemeBinders :: SurfaceType Span -> (Scheme -> Tc a) -> Tc (Scheme, [(Located Identifier, TypeVar)], a)
+realizeSchemeBinders = go [] [] []
     where
-        go :: [TypeVar] -> [Pred] -> SurfaceType Span -> (Scheme -> Tc a) -> Tc (Scheme, a)
-        go tvs preds (STForall _ ids ty) k = fmap snd (bindManyRigids (toList ids) $ \skolems -> go (tvs <> skolems) preds ty k)
-        go tvs preds (STConstrained _ ctx ty) k = do
+        go :: [TypeVar] -> [(Located Identifier, TypeVar)] -> [Pred] -> SurfaceType Span -> (Scheme -> Tc a) -> Tc (Scheme, [(Located Identifier, TypeVar)], a)
+        go tvs binders preds (STForall _ ids ty) k =
+            fmap snd (bindManyMVars (toList ids) $ \mvs ->
+                go (tvs <> mvs) (binders <> zip (toList ids) mvs) preds ty k)
+        go tvs binders preds (STConstrained _ ctx ty) k = do
             ps <- realizeContext ctx
-            go tvs (preds <> ps) ty k
-        go tvs preds ty k = do
+            go tvs binders (preds <> ps) ty k
+        go tvs binders preds ty k = do
             ty' <- realize ty
             let scm = Scheme tvs preds ty'
-            k scm >>= return . (scm,)
+            a <- k scm
+            return (scm, binders, a)
+
+-- does the following:
+-- - realize a signature into a reusable scheme (withRealizeSchemeBinders)
+-- - skolemize it, replacing all quantified metavariables with fresh skolems
+-- - runs the continuation against the *skolemized* scheme's body type and predicates, with all
+--   identifiers bound to the skolems
+-- - returns the *original* reusable scheme and the fresh skolems, so the caller can decide
+--   whether to emit the predicates and check for escape
+realizeSkolemizedScheme :: SurfaceType Span -> (CorbenicType -> [Pred] -> Tc a) -> Tc (Scheme, [TypeVar], a)
+realizeSkolemizedScheme st k = do
+    (scm@(Scheme mvs preds bodyTy), binders, _) <- realizeSchemeBinders st return
+    -- make a new rigid for each quantified metavariable
+    rigids <- traverse (\mv -> freshRigidTV (spanOf mv) (tvKind mv)) mvs
+    -- prepare a substitution that binds each mvar to its rigid
+    let skolemSubst = Subst (M.fromList (zip mvs (fmap CTVar rigids)))
+        preds' = apply skolemSubst preds
+        bodyTy' = apply skolemSubst bodyTy
+    -- rebind the surface names to the skolems for the duration of the check
+    let rebind = over tcTypeVars $ \env ->
+            foldr (\(Annotated _ ident, r) -> M.insert ident r) env (zip (fmap fst binders) rigids)
+    -- perform the body check
+    a <- local rebind (k bodyTy' preds')
+    return (scm, rigids, a)
+
+-- reconstruct the (possibly quantified and/or constrained) type denoted by a scheme
+schemeToType :: Scheme -> CorbenicType
+schemeToType (Scheme tvs preds body) =
+    let body' = case preds of
+            [] -> body
+            _ -> CTConstrained (spanOf body) preds body
+    in foldr (\tv t -> CTForall (spanOf tv) tv t) body' tvs
+
+-- check if any of the given skolems breached containment and
+-- entered the term environment when they are not supposed to
+checkSkolemEscape :: Span -> Set TypeVar -> Tc ()
+checkSkolemEscape sp skolems = do
+    s <- use currentSubst
+    env <- askFor tcTerms
+    let leaked = ftv (apply s env) `S.intersection` skolems
+    unless (S.null leaked) $
+        throwError $ TypeCheckerError sp (TCSkolemEscape (CTVar (S.findMin leaked)))
