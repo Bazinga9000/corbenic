@@ -224,3 +224,19 @@ The language has first class type lambdas and type aplications. To write a type 
 
 To apply a type, wrap it in angle brackets `〈` and `〉`. This is not restricted to explicitly defined type lambdas. You can also use this to constrain the types of polymorphic functions or typeclass methods (the latter is quite useful if type inference can't determine which type you're referring to).
   - Example: If you wish to restrict the type of the identity function so that it will only work on natural numbers, you may write `𝟏 〈ℕ〉` which will have type `ℕ → ℕ`.
+
+== The Monomorphism Restriction
+
+There isn't one (as of now).
+
+In Corbenic, all terms are generalized as much as they can be. Universally quantified types can be instantiated with different types in general. As always, type signatures can be used to change this behavior if you so desire.
+
+Do beware, though. If you ever find the need to use a certain extremely dangerous function that gives an escape hatch out of the IO monad `⌘`:
+
+```
+«☠⌘» ⠛ ⌘ a → a
+```
+
+You are liable to duplicate IO actions. You (hopefully) already know what you're doing if you want to reach for this, so the onus is on you to be safe.
+
+_Note: This is subject to change in the distant future when GADTs arrive, but even then what bars generalization will be quite limited._
