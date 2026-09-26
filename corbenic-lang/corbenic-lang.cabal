@@ -24,6 +24,7 @@ common shared-config
         TypeFamilies
         PatternSynonyms
         ViewPatterns
+        TupleSections
     build-depends:
         base >= 4.14 && < 5,
         relude,
@@ -59,6 +60,7 @@ library
                      , Frontend.TypeChecker.Seed
                      , Frontend.TypeChecker.Subst
                      , Frontend.TypeChecker.Unify
+                     , Frontend.TypeChecker.Infer
                      , Frontend.IOPipeline
                      , Syntax.Chars
                      , Syntax.Documentation
