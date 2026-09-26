@@ -78,10 +78,10 @@ data CorbenicType
 
 -- helpers to make common types
 mkFun :: Span -> CorbenicType -> CorbenicType -> CorbenicType
-mkFun sp a b = CTApp sp (CTApp sp (CTPrim sp PFunction) a) b
+mkFun sp a = CTApp sp (CTApp sp (CTPrim sp PFunction) a)
 
 mkList :: Span -> CorbenicType -> CorbenicType
-mkList sp a = CTApp sp (CTPrim sp PList) a
+mkList sp = CTApp sp (CTPrim sp PList)
 
 -- a typeclass constraint (or a magical equivalent)
 data Pred
@@ -183,11 +183,11 @@ instance Pretty CorbenicType where
     prettyPrint (CTApp _ (CTPrim _ PList) a) = "[" <> prettyPrint a <> "]"
     prettyPrint (CTApp _ f x) = prettyPrint f <> " " <> atom x where
         atom (CTApp _ (CTPrim _ PList) a) = "[" <> prettyPrint a <> "]"
-        atom t@(CTApp _ _ _) = "(" <> prettyPrint t <> ")"
+        atom t@(CTApp {}) = "(" <> prettyPrint t <> ")"
         atom t@(CTTuple _ _) = "(" <> prettyPrint t <> ")"
-        atom t@(CTForall _ _ _) = "(" <> prettyPrint t <> ")"
-        atom t@(CTExists _ _ _) = "(" <> prettyPrint t <> ")"
-        atom t@(CTConstrained _ _ _) = "(" <> prettyPrint t <> ")"
+        atom t@(CTForall {}) = "(" <> prettyPrint t <> ")"
+        atom t@(CTExists {}) = "(" <> prettyPrint t <> ")"
+        atom t@(CTConstrained {}) = "(" <> prettyPrint t <> ")"
         atom t = prettyPrint t
     prettyPrint (CTTuple _ ts) = "(" <> T.intercalate ", " (map prettyPrint (toList ts)) <> ")"
     prettyPrint (CTPred _ ps) = T.intercalate ", " (map prettyPrint ps)

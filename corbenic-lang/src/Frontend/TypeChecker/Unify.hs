@@ -13,7 +13,7 @@ import Relude.Unsafe (fromJust)
 bind :: TypeVar -> CorbenicType -> Tc ()
 bind n t
     | isRigid n = throwError $ TypeCheckerError (spanOf n) (TCBug "bind on a rigid")
-    | t == CTVar n = pure ()
+    | t == CTVar n = pass
     | n `S.member` ftv t = throwError (TypeCheckerError (spanOf n) (TCInfiniteType n t))
     | otherwise = currentSubst %= extendSubst n t
 
@@ -35,9 +35,9 @@ unify' (CTPrim _ a) (CTPrim _ b) | a == b = pass
 unify' (CTApp _ f x) (CTApp _ f' x') = unify f f' *> unify x x'
 unify' (CTTuple _ as) (CTTuple _ as') | length as == length as' = zipWithM_ unify (toList as) (toList as')
 unify' (CTPred _ preds) (CTPred _ _) = throwError $ rankNError $ fromJust $ viaNonEmpty head preds
-unify' (CTForall _ q1 _) (CTForall _ _ _) = throwError $ rankNError q1
-unify' (CTExists _ q1 _) (CTExists _ _ _) = throwError $ rankNError q1
-unify' (CTConstrained _ preds _) (CTConstrained _ _ _) = throwError $ rankNError $ fromJust $ viaNonEmpty head preds
+unify' (CTForall _ q1 _) (CTForall {}) = throwError $ rankNError q1
+unify' (CTExists _ q1 _) (CTExists {}) = throwError $ rankNError q1
+unify' (CTConstrained _ preds _) (CTConstrained {}) = throwError $ rankNError $ fromJust $ viaNonEmpty head preds
 unify' a b = throwError (TypeCheckerError (spanOf a) (TCCouldNotUnify a b))
 
 -- unify a TypeVar with anything

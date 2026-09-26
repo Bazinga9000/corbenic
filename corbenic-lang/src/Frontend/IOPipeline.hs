@@ -7,7 +7,7 @@ import Frontend.Parser (parse)
 import Syntax.Location
 import Syntax.Surface
 import Syntax.Token
-import System.IO
+import System.IO (hGetContents, openFile)
 
 -- run the various stages of the pipeline, printing warnings and errors
 -- automatically
@@ -44,4 +44,4 @@ runFrontend flags fp = do
                 Just a'' -> f a''
 
     void $ ioLex flags fp contents >>?= ioParse flags fp contents
-    pure ()
+    pass

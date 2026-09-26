@@ -13,4 +13,4 @@ import Relude.Extra.Bifunctor
 
 -- lens utility over reader
 askFor :: (MonadReader s m) => Getting b s b -> m b
-askFor l = (view l) <$> ask
+askFor l = view l <$> ask

@@ -20,7 +20,7 @@ lookupSubst :: Subst -> TypeVar -> Maybe CorbenicType
 lookupSubst (Subst s) tv = M.lookup tv s
 
 lookupSubstDefault :: CorbenicType -> Subst -> TypeVar -> CorbenicType
-lookupSubstDefault def s tv = maybe def id $ lookupSubst s tv
+lookupSubstDefault def s tv = fromMaybe def $ lookupSubst s tv
 
 deleteSubst :: TypeVar -> Subst -> Subst
 deleteSubst tv (Subst s) = Subst $ M.delete tv s
@@ -36,8 +36,8 @@ class Substitutable a where
     ftv :: a -> Set TypeVar
 
 instance (Substitutable a, Functor f, Foldable f) => Substitutable (f a) where
-    apply s as = fmap (apply s) as
-    ftv as = fold $ fmap ftv as
+    apply s = fmap (apply s)
+    ftv = foldMap ftv
 
 instance Substitutable CorbenicType where
     apply _ t@(CTVar (TypeVar (Rigid _) _ _)) = t
@@ -74,4 +74,4 @@ instance Substitutable Pred where
 
 instance Substitutable Scheme where
     apply s (Scheme tvs preds tys) = Scheme tvs (apply (deleteManySubst tvs s) preds) (apply (deleteManySubst tvs s) tys)
-    ftv (Scheme tvs preds tys) = (ftv preds `S.union` ftv tys) `S.difference` (S.fromList tvs)
+    ftv (Scheme tvs preds tys) = (ftv preds `S.union` ftv tys) `S.difference` S.fromList tvs

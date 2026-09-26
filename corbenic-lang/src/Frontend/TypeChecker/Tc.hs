@@ -61,11 +61,11 @@ makeLenses ''TcState
 makeLenses ''TcEnv
 
 -- generate a fresh name by incrementing a lens and applying a ctor
-freshName :: (Natural -> TypeVarName) -> (Lens' TcState Natural) -> Tc TypeVarName
+freshName :: (Natural -> TypeVarName) -> Lens' TcState Natural -> Tc TypeVarName
 freshName ctor l = ctor <$> ((l %= (+1)) *> use l)
 
 -- spawn a fresh typeVar
-freshVar :: (Natural -> TypeVarName) -> (Lens' TcState Natural) -> Span -> CorbenicKind -> Tc TypeVar
+freshVar :: (Natural -> TypeVarName) -> Lens' TcState Natural -> Span -> CorbenicKind -> Tc TypeVar
 freshVar ctor l sp k = do
     mn <- freshName ctor l
     return $
@@ -77,7 +77,7 @@ freshVar ctor l sp k = do
 
 -- spawn a fresh metavariable TVar
 freshMetavarTV :: Span -> CorbenicKind -> Tc TypeVar
-freshMetavarTV sp k = freshVar Metavar metaN sp k
+freshMetavarTV = freshVar Metavar metaN
 
 -- spawn a fresh metavariable CorbenicType
 freshMetavar :: Span -> CorbenicKind -> Tc CorbenicType
@@ -85,7 +85,7 @@ freshMetavar sp k = CTVar <$> freshMetavarTV sp k
 
 -- spawn a fresh rigid TVar
 freshRigidTV :: Span -> CorbenicKind -> Tc TypeVar
-freshRigidTV sp k = freshVar Rigid rigidN sp k
+freshRigidTV = freshVar Rigid rigidN
 
 -- spawn a fresh rigid / skolem CorbenicType
 freshRigid :: Span -> CorbenicKind -> Tc CorbenicType
@@ -104,7 +104,7 @@ bindToTVar (Annotated bsp ident) t = do
     k <- freshKind
     tv <- freshMetavarTV bsp k
     a <- local (over tcTypeVars (M.insert ident tv)) t
-    return $ (tv, a)
+    return (tv, a)
 
 -- locally bind an identifier to a fresh rigid variable within a given typechecker computation
 bindToRigid :: Annotated Span Identifier -> Tc a -> Tc (TypeVar, a)
@@ -112,7 +112,7 @@ bindToRigid (Annotated bsp ident) t = do
     k <- freshKind
     tv <- freshRigidTV bsp k
     a <- local (over tcTypeVars (M.insert ident tv)) t
-    return $ (tv, a)
+    return (tv, a)
 
 
 -- bind many rigids at once to fresh metavars in a given typechecker computation (allowed to read the variables)
@@ -121,7 +121,7 @@ bindManyMVars ((Annotated bsp ident):is) f = do
     tv <- freshKind >>= freshMetavarTV bsp
     (tvs', a) <- local (over tcTypeVars (M.insert ident tv)) (bindManyMVars is (f . (tv:)))
     return (tv:tvs', a)
-bindManyMVars [] f = f [] >>= return . ([],)
+bindManyMVars [] f = f [] <&> ([],)
 
 -- bind many rigids at once to fresh rigids in a given typechecker computation (allowed to read the variables)
 bindManyRigids :: [Annotated Span Identifier] -> ([TypeVar] -> Tc a) -> Tc ([TypeVar], a)
@@ -129,4 +129,4 @@ bindManyRigids ((Annotated bsp ident):is) f = do
     tv <- freshKind >>= freshRigidTV bsp
     (tvs', a) <- local (over tcTypeVars (M.insert ident tv)) (bindManyRigids is (f . (tv:)))
     return (tv:tvs', a)
-bindManyRigids [] f = f [] >>= return . ([],)
+bindManyRigids [] f = f [] <&> ([],)

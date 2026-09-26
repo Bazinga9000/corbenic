@@ -54,7 +54,7 @@ instance Diagnosible TypeCheckerError where
 
 data TypeCheckerWarning = TypeCheckerWarning Span TypeCheckerWarningKind
 
-data TypeCheckerWarningKind = TCOrphanInstance Pred
+newtype TypeCheckerWarningKind = TCOrphanInstance Pred
 
 instance Pretty TypeCheckerWarningKind where
     prettyPrint (TCOrphanInstance predicate) = "Orphan instance: " <> prettyPrint predicate

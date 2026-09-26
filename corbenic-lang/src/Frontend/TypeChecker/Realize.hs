@@ -29,9 +29,9 @@ isHigherRank t = go (stripSpine t)
     go (STList _ a) = go a
     go (STTuple _ as) = any go as
     go (STConstraint _ c) = go' c
-    go (STConstrained _ _ _) = True
-    go (STForall _ _ _) = True
-    go (STExists _ _ _) = True
+    go (STConstrained {}) = True
+    go (STForall {}) = True
+    go (STExists {}) = True
 
     go' (SurfaceClassContext _ apps) = any go'' apps
     go'' (SurfaceClassApp _ _ ts) = any go ts
