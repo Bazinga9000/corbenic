@@ -53,6 +53,7 @@ library
                      , Frontend.Parser.Combinators
                      , Frontend.Parser.Fixity
                      , Frontend.Parser.Types
+                     , Frontend.TypeChecker
                      , Frontend.TypeChecker.Types
                      , Frontend.TypeChecker.Tc
                      , Frontend.TypeChecker.Realize

@@ -8,9 +8,9 @@ import Syntax.Literal
 import Syntax.Location
 
 data SurfaceModule ann = SurfaceModule
-    { smName :: ModulePath ann
+    { smName :: ModulePath Span
     , smDoc :: Maybe DocComment -- module-wide doc comment
-    , smImports :: [SurfaceImport ann]
+    , smImports :: [SurfaceImport Span]
     , smDecls :: [MaybeExported SurfaceDeclaration ann]
     , smTermFixity :: FixityEnv
     , smTypeFixity :: FixityEnv
