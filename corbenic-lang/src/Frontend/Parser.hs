@@ -431,7 +431,21 @@ parseSTAtom =
         <|> try parseSTExists
 
 parseSTName :: Parser (SurfaceType Span)
-parseSTName = STName <$> parseIdentifier
+parseSTName = do
+    fixity <- askFor typeFixity
+    let FixityEnv m = fixity
+    Annotated sp t <-
+        satisfy
+            ( \lt -> case annVal lt of
+                TokIdentifier (IdentRaw i) -> isNothing (M.lookup (IdentRaw i) m) -- raw are only allowed if they aren't fixity'd
+                TokIdentifier _ -> True -- quoted/primitives are always usable as names
+                _ -> False
+            )
+    pure (STName (Annotated sp (identifierOf t)))
+  where
+    identifierOf :: Token -> Identifier
+    identifierOf (TokIdentifier i) = i
+    identifierOf _ = error "parseSTName: not an identifier"
 
 parseSTList :: Parser (SurfaceType Span)
 parseSTList = do
