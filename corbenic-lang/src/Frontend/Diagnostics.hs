@@ -2,7 +2,7 @@ module Frontend.Diagnostics (
     Severity (..),
     Diagnostic (..),
     renderDiagnostic,
-    Diagnosible (..)
+    Diagnosible (..),
 ) where
 
 import Prelude
@@ -24,9 +24,9 @@ data Diagnostic = Diagnostic
     }
 
 class Diagnosible a where
-  diagnose :: a -> Diagnostic
+    diagnose :: a -> Diagnostic
 
-renderDiagnostic :: Diagnosible a => FilePath -> String -> a -> Text
+renderDiagnostic :: (Diagnosible a) => FilePath -> String -> a -> Text
 renderDiagnostic file src diag =
     let (Diagnostic sev msg sp) = diagnose diag
         start = spanStart sp

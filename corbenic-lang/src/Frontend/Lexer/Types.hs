@@ -31,11 +31,12 @@ instance Pretty LexError where
     prettyPrint (LexError _ k) = prettyPrint k
 
 instance Diagnosible LexError where
-    diagnose (LexError s k) = Diagnostic
-        { diagSeverity = SevError
-        , diagMessage = prettyPrint k
-        , diagSpan = s
-        }
+    diagnose (LexError s k) =
+        Diagnostic
+            { diagSeverity = SevError
+            , diagMessage = prettyPrint k
+            , diagSpan = s
+            }
 
 lexErrorSpan :: LexError -> Span
 lexErrorSpan (LexError s _) = s
@@ -49,7 +50,6 @@ throwHere k = do
 -- throw an error at some other position
 throwAt :: Pos -> LexErrorKind -> Lexer a
 throwAt p k = throwError (LexError (Span p p) k)
-
 
 data LexWarning
     = LexWarning Span LexWarningKind
@@ -66,11 +66,12 @@ instance Pretty LexWarning where
     prettyPrint (LexWarning _ k) = prettyPrint k
 
 instance Diagnosible LexWarning where
-    diagnose (LexWarning s k) = Diagnostic {
-        diagSeverity = SevWarning,
-        diagMessage = prettyPrint k,
-        diagSpan = s
-    }
+    diagnose (LexWarning s k) =
+        Diagnostic
+            { diagSeverity = SevWarning
+            , diagMessage = prettyPrint k
+            , diagSpan = s
+            }
 
 -- | The lexer state. Note that tokens are stored in reverse (for easy prepending)
 data LexState = LexState

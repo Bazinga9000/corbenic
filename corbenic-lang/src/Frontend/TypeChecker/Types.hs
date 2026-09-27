@@ -20,7 +20,7 @@ newtype KindVar = KindVar Natural deriving (Eq, Ord, Show)
 
 -- a type variable name (also just a natural)
 -- either a normal metavar or a rigid/skolem (which can't be unificed)
-data TypeVarName = Metavar Natural | Rigid Natural  deriving (Eq, Ord, Show)
+data TypeVarName = Metavar Natural | Rigid Natural deriving (Eq, Ord, Show)
 
 -- a type variable, with its kind and the span where it was introduced.
 data TypeVar = TypeVar
@@ -154,7 +154,8 @@ instance Pretty KindVar where
 instance Pretty CorbenicKind where
     prettyPrint CKStar = "★"
     prettyPrint CKConstraint = "Constraint"
-    prettyPrint (CKArr k1 k2) = parenKind k1 <> " → " <> prettyPrint k2 where
+    prettyPrint (CKArr k1 k2) = parenKind k1 <> " → " <> prettyPrint k2
+      where
         parenKind k@(CKArr _ _) = "(" <> prettyPrint k <> ")"
         parenKind k = prettyPrint k
     prettyPrint (CKVar kv) = prettyPrint kv
@@ -181,13 +182,14 @@ instance Pretty CorbenicType where
     prettyPrint (CTPrim _ p) = prettyPrint p
     prettyPrint (CTApp _ (CTApp _ (CTPrim _ PFunction) a) b) = prettyPrint a <> " → " <> prettyPrint b
     prettyPrint (CTApp _ (CTPrim _ PList) a) = "[" <> prettyPrint a <> "]"
-    prettyPrint (CTApp _ f x) = prettyPrint f <> " " <> atom x where
+    prettyPrint (CTApp _ f x) = prettyPrint f <> " " <> atom x
+      where
         atom (CTApp _ (CTPrim _ PList) a) = "[" <> prettyPrint a <> "]"
-        atom t@(CTApp {}) = "(" <> prettyPrint t <> ")"
+        atom t@(CTApp{}) = "(" <> prettyPrint t <> ")"
         atom t@(CTTuple _ _) = "(" <> prettyPrint t <> ")"
-        atom t@(CTForall {}) = "(" <> prettyPrint t <> ")"
-        atom t@(CTExists {}) = "(" <> prettyPrint t <> ")"
-        atom t@(CTConstrained {}) = "(" <> prettyPrint t <> ")"
+        atom t@(CTForall{}) = "(" <> prettyPrint t <> ")"
+        atom t@(CTExists{}) = "(" <> prettyPrint t <> ")"
+        atom t@(CTConstrained{}) = "(" <> prettyPrint t <> ")"
         atom t = prettyPrint t
     prettyPrint (CTTuple _ ts) = "(" <> T.intercalate ", " (map prettyPrint (toList ts)) <> ")"
     prettyPrint (CTPred _ ps) = T.intercalate ", " (map prettyPrint ps)

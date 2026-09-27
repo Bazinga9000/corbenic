@@ -1,14 +1,14 @@
 module Frontend.TypeChecker.Unify (unify) where
 
+import Control.Lens
+import Control.Monad.Except
+import Data.Set qualified as S
+import Frontend.TypeChecker.Error
 import Frontend.TypeChecker.Subst
 import Frontend.TypeChecker.Tc
 import Frontend.TypeChecker.Types
-import Syntax.Location
-import Data.Set qualified as S
-import Frontend.TypeChecker.Error
-import Control.Monad.Except
-import Control.Lens
 import Relude.Unsafe (fromJust)
+import Syntax.Location
 
 bind :: TypeVar -> CorbenicType -> Tc ()
 bind n t
@@ -35,9 +35,9 @@ unify' (CTPrim _ a) (CTPrim _ b) | a == b = pass
 unify' (CTApp _ f x) (CTApp _ f' x') = unify f f' *> unify x x'
 unify' (CTTuple _ as) (CTTuple _ as') | length as == length as' = zipWithM_ unify (toList as) (toList as')
 unify' (CTPred _ preds) (CTPred _ _) = throwError $ rankNError $ fromJust $ viaNonEmpty head preds
-unify' (CTForall _ q1 _) (CTForall {}) = throwError $ rankNError q1
-unify' (CTExists _ q1 _) (CTExists {}) = throwError $ rankNError q1
-unify' (CTConstrained _ preds _) (CTConstrained {}) = throwError $ rankNError $ fromJust $ viaNonEmpty head preds
+unify' (CTForall _ q1 _) (CTForall{}) = throwError $ rankNError q1
+unify' (CTExists _ q1 _) (CTExists{}) = throwError $ rankNError q1
+unify' (CTConstrained _ preds _) (CTConstrained{}) = throwError $ rankNError $ fromJust $ viaNonEmpty head preds
 unify' a b = throwError (TypeCheckerError (spanOf a) (TCCouldNotUnify a b))
 
 -- unify a TypeVar with anything
@@ -46,7 +46,6 @@ unifyVar a (CTVar b) = unifyVars' a b
 unifyVar a t
     | isMetavar a = bind a t
     | otherwise = throwError (TypeCheckerError (spanOf a) (TCCouldNotUnify (CTVar a) t))
-
 
 -- unify a TypeVar with another TypeVar
 -- handles the proper rigid checking
@@ -59,5 +58,5 @@ unifyVars' a b = throwError $ TypeCheckerError (spanOf a) $ TCCouldNotUnify (CTV
 -- safety: preds call this with an unsafe fromJust, but the given is always nonempty (known at parse time),
 -- being lazy since this is a temporary error
 -- and will be removed once rank n exists
-rankNError :: HasSpan a => a -> TypeCheckerError
+rankNError :: (HasSpan a) => a -> TypeCheckerError
 rankNError a = TypeCheckerError (spanOf a) (TCNYI "rank-n types")

@@ -3,13 +3,13 @@ module Frontend.TypeChecker.Tc where
 import Control.Lens
 import Control.Monad.Except
 import Control.Monad.RWS
+import Data.Map qualified as M
 import Frontend.Flags
 import Frontend.TypeChecker.Error
 import Frontend.TypeChecker.Subst
 import Frontend.TypeChecker.Types
 import Syntax.Identifier
 import Syntax.Location
-import Data.Map qualified as M
 
 -- the type checker monad
 type Tc a = RWST TcEnv TcWriter TcState (Except TypeCheckerError) a
@@ -35,7 +35,7 @@ warn w = tell (TcWriter [] [w])
 
 -- clear only the constraints (for the letrec/generalize pattern), keeping warnings
 censorPreds :: Tc a -> Tc a
-censorPreds = censor (\w -> w { twPreds = [] })
+censorPreds = censor (\w -> w{twPreds = []})
 
 -- the type checker **state**
 data TcState = TcState
@@ -62,7 +62,7 @@ makeLenses ''TcEnv
 
 -- generate a fresh name by incrementing a lens and applying a ctor
 freshName :: (Natural -> TypeVarName) -> Lens' TcState Natural -> Tc TypeVarName
-freshName ctor l = ctor <$> ((l %= (+1)) *> use l)
+freshName ctor l = ctor <$> ((l %= (+ 1)) *> use l)
 
 -- spawn a fresh typeVar
 freshVar :: (Natural -> TypeVarName) -> Lens' TcState Natural -> Span -> CorbenicKind -> Tc TypeVar
@@ -114,19 +114,18 @@ bindToRigid (Annotated bsp ident) t = do
     a <- local (over tcTypeVars (M.insert ident tv)) t
     return (tv, a)
 
-
 -- bind many rigids at once to fresh metavars in a given typechecker computation (allowed to read the variables)
 bindManyMVars :: [Annotated Span Identifier] -> ([TypeVar] -> Tc a) -> Tc ([TypeVar], a)
-bindManyMVars ((Annotated bsp ident):is) f = do
+bindManyMVars ((Annotated bsp ident) : is) f = do
     tv <- freshKind >>= freshMetavarTV bsp
-    (tvs', a) <- local (over tcTypeVars (M.insert ident tv)) (bindManyMVars is (f . (tv:)))
-    return (tv:tvs', a)
+    (tvs', a) <- local (over tcTypeVars (M.insert ident tv)) (bindManyMVars is (f . (tv :)))
+    return (tv : tvs', a)
 bindManyMVars [] f = f [] <&> ([],)
 
 -- bind many rigids at once to fresh rigids in a given typechecker computation (allowed to read the variables)
 bindManyRigids :: [Annotated Span Identifier] -> ([TypeVar] -> Tc a) -> Tc ([TypeVar], a)
-bindManyRigids ((Annotated bsp ident):is) f = do
+bindManyRigids ((Annotated bsp ident) : is) f = do
     tv <- freshKind >>= freshRigidTV bsp
-    (tvs', a) <- local (over tcTypeVars (M.insert ident tv)) (bindManyRigids is (f . (tv:)))
-    return (tv:tvs', a)
+    (tvs', a) <- local (over tcTypeVars (M.insert ident tv)) (bindManyRigids is (f . (tv :)))
+    return (tv : tvs', a)
 bindManyRigids [] f = f [] <&> ([],)

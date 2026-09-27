@@ -2,16 +2,16 @@ module Frontend.TypeChecker.Realize where
 
 import Control.Lens
 import Control.Monad.Except
+import Data.Map qualified as M
+import Data.Set qualified as S
 import Frontend.TypeChecker.Error
 import Frontend.TypeChecker.Seed
+import Frontend.TypeChecker.Subst
 import Frontend.TypeChecker.Tc
 import Frontend.TypeChecker.Types
-import Frontend.TypeChecker.Subst
 import Syntax.Identifier
 import Syntax.Location
 import Syntax.Surface
-import Data.Map qualified as M
-import Data.Set qualified as S
 
 -- temporary way to forbid rank n types before we implement them
 -- probably imperfect, but whatever it doesn't have to be perfect
@@ -29,9 +29,9 @@ isHigherRank t = go (stripSpine t)
     go (STList _ a) = go a
     go (STTuple _ as) = any go as
     go (STConstraint _ c) = go' c
-    go (STConstrained {}) = True
-    go (STForall {}) = True
-    go (STExists {}) = True
+    go (STConstrained{}) = True
+    go (STForall{}) = True
+    go (STExists{}) = True
 
     go' (SurfaceClassContext _ apps) = any go'' apps
     go'' (SurfaceClassApp _ _ ts) = any go ts
@@ -112,8 +112,6 @@ resolveTypeName sp ident = do
                                 Just _ -> return $ CTPred sp [Pred sp ident []]
                                 Nothing -> throwError $ TypeCheckerError sp (TCUnboundTypeConstructor ident)
 
-
-
 -- realize a type into a *reusable* scheme: leading quantifiers become fresh
 -- metavariables. passes a continuation to run in which the surface
 -- binder names are in scope
@@ -125,19 +123,22 @@ realizeScheme st k = do
 -- as realized scheme, but also returns a list of tuples of (quantified identifier, bound metavar)
 realizeSchemeBinders :: SurfaceType Span -> (Scheme -> Tc a) -> Tc (Scheme, [(Located Identifier, TypeVar)], a)
 realizeSchemeBinders = go [] [] []
-    where
-        go :: [TypeVar] -> [(Located Identifier, TypeVar)] -> [Pred] -> SurfaceType Span -> (Scheme -> Tc a) -> Tc (Scheme, [(Located Identifier, TypeVar)], a)
-        go tvs binders preds (STForall _ ids ty) k =
-            fmap snd (bindManyMVars (toList ids) $ \mvs ->
-                go (tvs <> mvs) (binders <> zip (toList ids) mvs) preds ty k)
-        go tvs binders preds (STConstrained _ ctx ty) k = do
-            ps <- realizeContext ctx
-            go tvs binders (preds <> ps) ty k
-        go tvs binders preds ty k = do
-            ty' <- realize ty
-            let scm = Scheme tvs preds ty'
-            a <- k scm
-            return (scm, binders, a)
+  where
+    go :: [TypeVar] -> [(Located Identifier, TypeVar)] -> [Pred] -> SurfaceType Span -> (Scheme -> Tc a) -> Tc (Scheme, [(Located Identifier, TypeVar)], a)
+    go tvs binders preds (STForall _ ids ty) k =
+        fmap
+            snd
+            ( bindManyMVars (toList ids) $ \mvs ->
+                go (tvs <> mvs) (binders <> zip (toList ids) mvs) preds ty k
+            )
+    go tvs binders preds (STConstrained _ ctx ty) k = do
+        ps <- realizeContext ctx
+        go tvs binders (preds <> ps) ty k
+    go tvs binders preds ty k = do
+        ty' <- realize ty
+        let scm = Scheme tvs preds ty'
+        a <- k scm
+        return (scm, binders, a)
 
 -- does the following:
 -- - realize a signature into a reusable scheme (withRealizeSchemeBinders)
@@ -168,7 +169,7 @@ schemeToType (Scheme tvs preds body) =
     let body' = case preds of
             [] -> body
             _ -> CTConstrained (spanOf body) preds body
-    in foldr (\tv t -> CTForall (spanOf tv) tv t) body' tvs
+     in foldr (\tv t -> CTForall (spanOf tv) tv t) body' tvs
 
 -- check if any of the given skolems breached containment and
 -- entered the term environment when they are not supposed to
@@ -178,4 +179,5 @@ checkSkolemEscape sp skolems = do
     env <- askFor tcTerms
     let leaked = ftv (apply s env) `S.intersection` skolems
     unless (S.null leaked) $
-        throwError $ TypeCheckerError sp (TCSkolemEscape (CTVar (S.findMin leaked)))
+        throwError $
+            TypeCheckerError sp (TCSkolemEscape (CTVar (S.findMin leaked)))

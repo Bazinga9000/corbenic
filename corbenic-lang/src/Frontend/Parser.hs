@@ -10,6 +10,7 @@ import Text.Megaparsec hiding (ParseError, Token, many, some)
 import Control.Monad.Combinators.Expr
 import Data.List qualified as L
 import Data.Map qualified as M
+import Frontend.Flags (FrontendFlags)
 import Frontend.Parser.Combinators
 import Frontend.Parser.Fixity (collectFixities)
 import Frontend.Parser.Types
@@ -20,7 +21,6 @@ import Syntax.Identifier
 import Syntax.Location
 import Syntax.Surface
 import Syntax.Token
-import Frontend.Flags (FrontendFlags)
 
 -- an identifier (will allow primitives, illegally placed primitives are rejected by TC)
 parseIdentifier :: Parser (Located Identifier)
@@ -799,11 +799,12 @@ defaultTypeFixityEnv = FixityEnv (one (IdentRaw "→", RightAssocBinary 5))
 parse :: FrontendFlags -> [Located Token] -> Either ParseError (SurfaceModule Span, [ParseWarning])
 parse feFlags toks = do
     let (termFix, typeFix) = collectFixities toks
-    let pState = ParserState {
-        _termFixity = termFix,
-        _typeFixity = defaultTypeFixityEnv <> typeFix,
-        _flags = feFlags
-    }
+    let pState =
+            ParserState
+                { _termFixity = termFix
+                , _typeFixity = defaultTypeFixityEnv <> typeFix
+                , _flags = feFlags
+                }
     (m, _, warns) <-
         first bundleToParseError $
             runParser (runRWST parseModule pState ()) "" toks

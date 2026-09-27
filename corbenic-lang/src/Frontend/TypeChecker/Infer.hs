@@ -2,20 +2,19 @@ module Frontend.TypeChecker.Infer where
 
 import Control.Lens
 import Control.Monad.Except
+import Data.List.NonEmpty qualified as NE
+import Data.Map qualified as M
+import Data.Set qualified as S
 import Frontend.TypeChecker.Error
+import Frontend.TypeChecker.Realize
 import Frontend.TypeChecker.Subst
 import Frontend.TypeChecker.Tc
 import Frontend.TypeChecker.Types
-import Frontend.TypeChecker.Realize
 import Frontend.TypeChecker.Unify
+import Syntax.Identifier
+import Syntax.Literal
 import Syntax.Location
 import Syntax.Surface
-import Syntax.Literal
-import Syntax.Identifier
-import Data.Set qualified as S
-import Data.Map qualified as M
-import Data.List.NonEmpty qualified as NE
-
 
 -- create fresh names for each variable in the scheme, turn it into a type
 instantiate :: Scheme -> Tc CorbenicType
@@ -28,16 +27,19 @@ instantiate (Scheme vs preds ty) = do
     -- instantiate the type
     return $ apply s ty
 
-
 -- extract all universally quantified vars and predicates
 -- from a type
 unrollSpine :: CorbenicType -> ([TypeVar], [Pred], CorbenicType)
-unrollSpine (CTForall _ tv body) = let
-    (tvs, preds, body') = unrollSpine body
-    in (tv : tvs, preds, body')
-unrollSpine (CTConstrained _ ps body) = let
-    (tvs, preds, body') = unrollSpine body
-    in (tvs, ps <> preds, body')
+unrollSpine (CTForall _ tv body) =
+    let
+        (tvs, preds, body') = unrollSpine body
+     in
+        (tv : tvs, preds, body')
+unrollSpine (CTConstrained _ ps body) =
+    let
+        (tvs, preds, body') = unrollSpine body
+     in
+        (tvs, ps <> preds, body')
 unrollSpine ty = ([], [], ty)
 
 -- close over all free non-rigid variables in the type, generating a scheme.
@@ -162,7 +164,6 @@ infer (SEAnnotation ann e sty) = do
     return $ SEAnnotation (ann, schemeToType scm) e' sty
 infer (SEHole sp) = freshMetavar sp CKStar >>= \t -> return . SEHole $ (sp, t)
 
-
 -- check an expression against a known type
 check :: SurfaceExpr Span -> CorbenicType -> Tc (SurfaceExpr (Span, CorbenicType))
 check e@(SELiteral _) t = dumbCheck e t
@@ -206,17 +207,17 @@ check (SETypeLambda sp i@(Annotated spi ident) body) t = do
             (rv, body') <- bindToRigid i (check body b)
             let ty = CTForall sp rv (exprType body')
             throwError $ TypeCheckerError sp (TCCouldNotUnify ty t)
-check e@(SETypeApp {}) t = dumbCheck e t
+check e@(SETypeApp{}) t = dumbCheck e t
 check (SEWhere sp e decls) t = do
     generalizeWhereDecls decls $ \decls' -> do
         e' <- check e t
         return $ SEWhere (sp, t) e' decls'
 check (SEDo sp sdis) t = checkDo sp sdis (Just t)
 check (SECase sp scrut branches) t = do
-  scrut' <- infer scrut
-  let scrutTy = exprType scrut'
-  branches' <- mapM (checkBranch scrutTy t) branches
-  return $ SECase (sp, t) scrut' branches'
+    scrut' <- infer scrut
+    let scrutTy = exprType scrut'
+    branches' <- mapM (checkBranch scrutTy t) branches
+    return $ SECase (sp, t) scrut' branches'
 check (SELambdaCase sp branches) t = do
     scrutTy <- freshMetavar sp CKStar
     r <- freshMetavar sp CKStar
@@ -234,8 +235,8 @@ check (SETuple sp es) t = do
     unify t (CTTuple sp ts)
     es' <- zipWithMNE check es ts
     return $ SETuple (sp, CTTuple sp ts) es'
-check e@(SEOpSectionL {}) t = dumbCheck e t
-check e@(SEOpSectionR {}) t = dumbCheck e t
+check e@(SEOpSectionL{}) t = dumbCheck e t
+check e@(SEOpSectionR{}) t = dumbCheck e t
 check (SEInfix sp l operand r) t = check (SEApp sp (SEApp sp (SEIdentifier operand) l) r) t
 check (SEAnnotation ann e sty) t = do
     (scm, skolems, e') <- realizeSkolemizedScheme sty $ \bodyTy _ -> check e bodyTy
@@ -250,12 +251,11 @@ checkTermDecl :: Maybe (SurfaceTypeDecl Span) -> SurfaceTermDecl Span -> Tc (Sch
 checkTermDecl mSig d@(SurfaceTermDecl sp _ (Annotated spi ident) body) = do
     (scm, body') <- case mSig of
         Nothing -> do
-           body' <- infer body
-           scm <- generalize $ exprType body'
-           return (scm, body')
+            body' <- infer body
+            scm <- generalize $ exprType body'
+            return (scm, body')
         Just sig -> checkAgainstSignature (stydType sig) body
-    return (scm, d { stdBody = body', stdAnn = (sp, exprType body'), stdName = Annotated (spi, exprType body') ident})
-
+    return (scm, d{stdBody = body', stdAnn = (sp, exprType body'), stdName = Annotated (spi, exprType body') ident})
 
 checkAgainstSignature :: SurfaceType Span -> SurfaceExpr Span -> Tc (Scheme, SurfaceExpr (Span, CorbenicType))
 checkAgainstSignature sig body = do
@@ -267,21 +267,23 @@ checkAgainstSignature sig body = do
     checkSkolemEscape (spanOf sig) (S.fromList skolems)
     return (scm, body')
 
-
 -- Check a where block's declarations and run a continuation with the schemes in scope and the typed decls
-generalizeWhereDecls :: [SurfaceWhereDeclaration Span]
-                     -> ([SurfaceWhereDeclaration (Span, CorbenicType)] -> Tc a)
-                     -> Tc a
+generalizeWhereDecls ::
+    [SurfaceWhereDeclaration Span] ->
+    ([SurfaceWhereDeclaration (Span, CorbenicType)] -> Tc a) ->
+    Tc a
 generalizeWhereDecls decls k = do
-      let binds = [ (name, stydType <$> mSig, body)
-                  | SWDTerm mSig (SurfaceTermDecl _ _ (Annotated _ name) body) <- decls ]
-      checkKnot binds $ \finalized -> do
-          let rewrapped =
-                  [ SWDTerm mSig (SurfaceTermDecl (sp, bt) doc (Annotated (spi, bt) name) body')
-                  | (SWDTerm mSig (SurfaceTermDecl sp doc (Annotated spi name) _), (_, _, body')) <- zip decls finalized
-                  , let bt = exprType body' ]
-          k rewrapped
-
+    let binds =
+            [ (name, stydType <$> mSig, body)
+            | SWDTerm mSig (SurfaceTermDecl _ _ (Annotated _ name) body) <- decls
+            ]
+    checkKnot binds $ \finalized -> do
+        let rewrapped =
+                [ SWDTerm mSig (SurfaceTermDecl (sp, bt) doc (Annotated (spi, bt) name) body')
+                | (SWDTerm mSig (SurfaceTermDecl sp doc (Annotated spi name) _), (_, _, body')) <- zip decls finalized
+                , let bt = exprType body'
+                ]
+        k rewrapped
 
 -- check a branch against the given scrutinee's type and result type
 -- all binds generated in patterns are monomorphic
@@ -294,8 +296,10 @@ checkBranch scrutTy resultTy (SurfaceBranch sp pat body) = do
 
 -- check a pattern against the type of the value it matches
 -- returns both the typed pattern and a map of its bindings' types
-checkPattern :: SurfacePattern Span -> CorbenicType
-             -> Tc (SurfacePattern (Span, CorbenicType), Map Identifier CorbenicType)
+checkPattern ::
+    SurfacePattern Span ->
+    CorbenicType ->
+    Tc (SurfacePattern (Span, CorbenicType), Map Identifier CorbenicType)
 checkPattern (SPLiteral (Annotated sp l)) t = do
     ty <- exprType <$> inferLiteral (Annotated sp l)
     unify t ty
@@ -333,71 +337,68 @@ checkPattern (SPTuple sp ps) t = do
             ps' <- zipWithMNE checkPattern ps vars'
             return (SPTuple (sp, t) (fmap fst ps'), foldMap snd ps')
 
-
 -- check a do block against a (possibly inferred) result type
 checkDo :: Span -> NonEmpty (SurfaceDoInstruction Span) -> Maybe CorbenicType -> Tc (SurfaceExpr (Span, CorbenicType))
 checkDo sp sdis mt = do
-  m <- freshMetavar sp (CKArr CKStar CKStar)
-  -- check if Monad is in scope if it isn't, throw an error
-  -- we don't use realizeClassApp here since that needs
-  -- a SurfaceType which we don't have
-  cs <- askFor tcClasses
-  case M.lookup (IdentRaw "Monad") cs of
-    Nothing -> throwError $ TypeCheckerError sp $ TCUnboundClass (IdentRaw "Monad")
-    Just _ -> tellPreds [Pred (spanOf m) (IdentRaw "Monad") [m]]
-  a <- freshMetavar sp CKStar
-  let ma = CTApp sp m a
-  case mt of
-    Nothing -> pass
-    Just t -> unify t ma
-  sdis' <- checkDoBlocks m a sdis
-  return $ SEDo (sp, ma) sdis'
-
+    m <- freshMetavar sp (CKArr CKStar CKStar)
+    -- check if Monad is in scope if it isn't, throw an error
+    -- we don't use realizeClassApp here since that needs
+    -- a SurfaceType which we don't have
+    cs <- askFor tcClasses
+    case M.lookup (IdentRaw "Monad") cs of
+        Nothing -> throwError $ TypeCheckerError sp $ TCUnboundClass (IdentRaw "Monad")
+        Just _ -> tellPreds [Pred (spanOf m) (IdentRaw "Monad") [m]]
+    a <- freshMetavar sp CKStar
+    let ma = CTApp sp m a
+    case mt of
+        Nothing -> pass
+        Just t -> unify t ma
+    sdis' <- checkDoBlocks m a sdis
+    return $ SEDo (sp, ma) sdis'
 
 -- check a list of do instructions, in order, with a given monad and last-line result type
 checkDoBlocks :: CorbenicType -> CorbenicType -> NonEmpty (SurfaceDoInstruction Span) -> Tc (NonEmpty (SurfaceDoInstruction (Span, CorbenicType)))
 checkDoBlocks monad t sdiNE = case NE.uncons sdiNE of
-  (SDIMonadicStmt e, Nothing) -> one . SDIMonadicStmt <$> check e (CTApp (spanOf e) monad t)
-  (e, Nothing) -> throwError $ TypeCheckerError (spanOf e) TCBadDoBlockEnding
-  (SDIMonadicStmt e, Just sdis) -> do
-    -- todo: warn if a isn't unit, somehow
-    a <- freshMetavar (spanOf e) CKStar
-    e' <- check e (CTApp (spanOf e) monad a)
-    sdis' <- checkDoBlocks monad t sdis
-    return $ SDIMonadicStmt e' `NE.cons` sdis'
-  (SDIBindName sp (Annotated spi ident) body, Just sdis) -> do
-    body' <- infer body
-    let bodyTy = exprType body'
-    let bodyScheme = Scheme [] [] bodyTy
-    sdis' <- local (over tcTerms (M.insert ident bodyScheme)) (checkDoBlocks monad t sdis)
-    let this = SDIBindName (sp, bodyTy) (Annotated (spi, bodyTy) ident) body'
-    return $ this `NE.cons` sdis'
-  (SDIExtractMonad sp (Annotated spi ident) body, Just sdis) -> do
-    a <- freshMetavar spi CKStar
-    let ma = CTApp (spanOf body) monad a
-    body' <- check body ma
-    let aSchm = Scheme [] [] a
-    sdis' <- local (over tcTerms (M.insert ident aSchm)) (checkDoBlocks monad t sdis)
-    let this = SDIExtractMonad (sp, ma) (Annotated (spi, a) ident) body'
-    return $ this `NE.cons` sdis'
-
+    (SDIMonadicStmt e, Nothing) -> one . SDIMonadicStmt <$> check e (CTApp (spanOf e) monad t)
+    (e, Nothing) -> throwError $ TypeCheckerError (spanOf e) TCBadDoBlockEnding
+    (SDIMonadicStmt e, Just sdis) -> do
+        -- todo: warn if a isn't unit, somehow
+        a <- freshMetavar (spanOf e) CKStar
+        e' <- check e (CTApp (spanOf e) monad a)
+        sdis' <- checkDoBlocks monad t sdis
+        return $ SDIMonadicStmt e' `NE.cons` sdis'
+    (SDIBindName sp (Annotated spi ident) body, Just sdis) -> do
+        body' <- infer body
+        let bodyTy = exprType body'
+        let bodyScheme = Scheme [] [] bodyTy
+        sdis' <- local (over tcTerms (M.insert ident bodyScheme)) (checkDoBlocks monad t sdis)
+        let this = SDIBindName (sp, bodyTy) (Annotated (spi, bodyTy) ident) body'
+        return $ this `NE.cons` sdis'
+    (SDIExtractMonad sp (Annotated spi ident) body, Just sdis) -> do
+        a <- freshMetavar spi CKStar
+        let ma = CTApp (spanOf body) monad a
+        body' <- check body ma
+        let aSchm = Scheme [] [] a
+        sdis' <- local (over tcTerms (M.insert ident aSchm)) (checkDoBlocks monad t sdis)
+        let this = SDIExtractMonad (sp, ma) (Annotated (spi, a) ident) body'
+        return $ this `NE.cons` sdis'
 
 -- helpers begin here
 
 -- convert a curried function into a list of its arguments
 peelFun :: CorbenicType -> ([CorbenicType], CorbenicType)
-peelFun ts = (reverse $ tail ts', head ts') where
+peelFun ts = (reverse $ tail ts', head ts')
+  where
     ts' = go ts
     go (CTApp _ (CTApp _ (CTPrim _ PFunction) a) b) = go b <> one a
     go t = one t
 
 -- monadic zipWith over nonempty, because this isn't in the prelude???
-zipWithMNE :: Monad m => (a -> b -> m c) -> NonEmpty a -> NonEmpty b -> m (NonEmpty c)
+zipWithMNE :: (Monad m) => (a -> b -> m c) -> NonEmpty a -> NonEmpty b -> m (NonEmpty c)
 zipWithMNE f (a :| as) (b :| bs) = do
     hd <- f a b
     tl <- zipWithM f as bs
     return $ hd :| tl
-
 
 -- the type of a typed expression node, fetched from its annotation
 exprType :: SurfaceExpr (Span, CorbenicType) -> CorbenicType
@@ -431,9 +432,10 @@ inferLiteral l@(Annotated _ (LitText _)) = mkQuintessableLiteral l PText
 
 -- helper for checking mutually recursive bindings
 -- used in for example class/instance declarations, where clauses, etc
-checkKnot :: [(Identifier, Maybe (SurfaceType Span), SurfaceExpr Span)] -- ident, maybe annotation
-          -> ([(Identifier, Scheme, SurfaceExpr (Span, CorbenicType))] -> Tc a) -- continuation
-          -> Tc a
+checkKnot ::
+    [(Identifier, Maybe (SurfaceType Span), SurfaceExpr Span)] -> -- ident, maybe annotation
+    ([(Identifier, Scheme, SurfaceExpr (Span, CorbenicType))] -> Tc a) -> -- continuation
+    Tc a
 checkKnot binds k = do
     -- seed by either realizing the signature's scheme or ginning up a fresh monomorphic scheme
     seeded <- forM binds $ \(name, mSig, body) -> do
