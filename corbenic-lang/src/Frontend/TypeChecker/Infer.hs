@@ -415,8 +415,8 @@ dumbCheck e t = do
 mkQuintessableLiteral :: Located Literal -> PrimType -> Tc (SurfaceExpr (Span, CorbenicType))
 mkQuintessableLiteral (Annotated sp l) p = do
     a <- freshMetavar sp CKStar
-    let t = CTConstrained sp [Quintessable sp (CTPrim sp p) a] a
-    return $ SELiteral (Annotated (sp, t) l)
+    tellPreds [Quintessable sp (CTPrim sp p) a]
+    return $ SELiteral (Annotated (sp, a) l)
 
 inferLiteral :: Located Literal -> Tc (SurfaceExpr (Span, CorbenicType))
 inferLiteral l@(Annotated _ (LitNatural _)) = mkQuintessableLiteral l PNatural
@@ -424,8 +424,8 @@ inferLiteral (Annotated sp (LitRational l)) = do
     -- not a bare primitive (it's Ratio ℤ), so do this one explicitly
     a <- freshMetavar sp CKStar
     let q = CTApp sp (CTPrim sp PRatio) (CTPrim sp PInteger)
-    let t = CTConstrained sp [Quintessable sp q a] a
-    return $ SELiteral (Annotated (sp, t) (LitRational l))
+    tellPreds [Quintessable sp q a]
+    return $ SELiteral (Annotated (sp, a) (LitRational l))
 inferLiteral l@(Annotated _ (LitBool _)) = mkQuintessableLiteral l PBool
 inferLiteral l@(Annotated _ (LitChar _)) = mkQuintessableLiteral l PChar
 inferLiteral l@(Annotated _ (LitText _)) = mkQuintessableLiteral l PText
