@@ -234,7 +234,7 @@ In Corbenic, all terms are generalized as much as they can be. Universally quant
 Do beware, though. If you ever find the need to use a certain extremely dangerous function that gives an escape hatch out of the IO monad `⌘`:
 
 ```
-«☠⌘» ⠛ ⌘ a → a
+«☠⌘» ⠛ ∀a. ⌘ a → a
 ```
 
 You are liable to duplicate IO actions. You (hopefully) already know what you're doing if you want to reach for this, so the onus is on you to be safe.
