@@ -5,15 +5,57 @@ import Frontend.Flags
 import Frontend.Lexer
 import Frontend.Parser (parse)
 import Frontend.Parser.Types (ParseError (..), ParseErrorKind (..))
+import Frontend.TypeChecker
+import Frontend.TypeChecker.Error (TypeCheckerError (..), TypeCheckerErrorKind (..))
 import Syntax.Chars
+import Syntax.Identifier (Identifier (..))
 import Test.Tasty
 import Test.Tasty.HUnit
 
 data TestOutcome
-    = Okay
-    | LexE LexErrorKind
+    = LexE LexErrorKind
     | ParseE ParseErrorKind
+    | Parses
+    | TypeCheckE TcErrorShape
+    | TypeChecks
     deriving (Eq, Show)
+
+-- typechecker errors carry data that's annoying to replicate in a test
+-- so we only match on the rough shape of the error (the things that are easy to gin up)
+data TcErrorShape
+    = TcUnboundIdentifier Identifier
+    | TcUnboundTypeConstructor Identifier
+    | TcUnboundClass Identifier
+    | TcCouldNotUnify
+    | TcInfiniteType
+    | TcIllegalTypeApp
+    | TcMissingInstance
+    | TcAmbiguousType
+    | TcAmbiguousTypeVar
+    | TcDuplicateDeclaration Identifier
+    | TcSkolemEscape
+    | TcPatternArity Identifier Natural Natural
+    | TcBadDoBlockEnding
+    | TcBug Text
+    | TcNYI Text
+    deriving (Eq, Show)
+
+tcErrorShape :: TypeCheckerErrorKind -> TcErrorShape
+tcErrorShape (TCUnboundIdentifier i) = TcUnboundIdentifier i
+tcErrorShape (TCUnboundTypeConstructor i) = TcUnboundTypeConstructor i
+tcErrorShape (TCUnboundClass i) = TcUnboundClass i
+tcErrorShape (TCCouldNotUnify _ _) = TcCouldNotUnify
+tcErrorShape (TCInfiniteType _ _) = TcInfiniteType
+tcErrorShape (TCIllegalTypeApp _) = TcIllegalTypeApp
+tcErrorShape (TCMissingInstance _) = TcMissingInstance
+tcErrorShape (TCAmbiguousType _) = TcAmbiguousType
+tcErrorShape (TCAmbiguousTypeVar _ _) = TcAmbiguousTypeVar
+tcErrorShape (TCDuplicateDeclaration i) = TcDuplicateDeclaration i
+tcErrorShape (TCSkolemEscape _) = TcSkolemEscape
+tcErrorShape (TCPatternArity i n m) = TcPatternArity i n m
+tcErrorShape TCBadDoBlockEnding = TcBadDoBlockEnding
+tcErrorShape (TCBug t) = TcBug t
+tcErrorShape (TCNYI t) = TcNYI t
 
 testFlags :: FrontendFlags
 testFlags =
@@ -24,86 +66,175 @@ testFlags =
         , _fAllowOrphans = False
         }
 
-runCase :: TestOutcome -> String -> Assertion
-runCase expected src = do
-    outcome <- case scanTokens src of
-        Left (LexError _ k) -> pure (LexE k)
-        Right (toks, _) -> case parse testFlags toks of
-            Left (ParseError _ k) -> pure (ParseE k)
-            Right _ -> pure Okay
-    expected @?= outcome
+-- run the whole frontend, reporting where it stopped
+runFrontend :: String -> TestOutcome
+runFrontend src = case scanTokens src of
+    Left (LexError _ k) -> LexE k
+    Right (toks, _) -> case parse testFlags toks of
+        Left (ParseError _ k) -> ParseE k
+        Right (modl, _) -> case typeCheckModule testFlags modl of
+            Left (TypeCheckerError _ k) -> TypeCheckE (tcErrorShape k)
+            Right _ -> TypeChecks
 
-cases :: [(String, String, TestOutcome)]
-cases =
-    [ ("bad_fixity", decodeUtf8 $(embedFileRelative "test/Cases/lexerr/bad_fixity.corb"), LexE (LexBadFixity "⦿⌟"))
-    , ("indent_jump", decodeUtf8 $(embedFileRelative "test/Cases/lexerr/indent_jump.corb"), LexE (LexLayoutJumped 2))
-    , ("odd_indent", decodeUtf8 $(embedFileRelative "test/Cases/lexerr/odd_indent.corb"), LexE (LexInvalidIndentLevel 1))
-    , ("suffix_alone", decodeUtf8 $(embedFileRelative "test/Cases/lexerr/suffix_alone.corb"), LexE (LexUnexpected '′'))
-    , ("unterminated_char", decodeUtf8 $(embedFileRelative "test/Cases/lexerr/unterminated_char.corb"), LexE (LexUnexpected '\''))
-    , ("unterminated_guillemet", decodeUtf8 $(embedFileRelative "test/Cases/lexerr/unterminated_guillemet.corb"), LexE (LexUnterminated QGuillemet))
-    , ("unterminated_ornate", decodeUtf8 $(embedFileRelative "test/Cases/lexerr/unterminated_ornate.corb"), LexE (LexUnterminated QPrimitive))
-    , ("unterminated_text", decodeUtf8 $(embedFileRelative "test/Cases/lexerr/unterminated_text.corb"), LexE (LexUnexpected '"'))
-    , ("missing_module_glyph", decodeUtf8 $(embedFileRelative "test/Cases/parseerr/missing_module_glyph.corb"), ParseE ParseSyntaxError)
-    , ("missing_module_name", decodeUtf8 $(embedFileRelative "test/Cases/parseerr/missing_module_name.corb"), ParseE ParseSyntaxError)
-    , ("import_missing_path", decodeUtf8 $(embedFileRelative "test/Cases/parseerr/import_missing_path.corb"), ParseE ParseSyntaxError)
-    , ("import_block_unclosed", decodeUtf8 $(embedFileRelative "test/Cases/parseerr/import_block_unclosed.corb"), ParseE ParseSyntaxError)
-    , ("import_block_no_dedent", decodeUtf8 $(embedFileRelative "test/Cases/ok/import_block_no_dedent.corb"), Okay)
-    , ("bare_module", decodeUtf8 $(embedFileRelative "test/Cases/ok/bare_module.corb"), Okay)
-    , ("dotted_module", decodeUtf8 $(embedFileRelative "test/Cases/ok/dotted_module.corb"), Okay)
-    , ("import_simple", decodeUtf8 $(embedFileRelative "test/Cases/ok/import_simple.corb"), Okay)
-    , ("import_reexport", decodeUtf8 $(embedFileRelative "test/Cases/ok/import_reexport.corb"), Okay)
-    , ("import_qualified", decodeUtf8 $(embedFileRelative "test/Cases/ok/import_qualified.corb"), Okay)
-    , ("import_block", decodeUtf8 $(embedFileRelative "test/Cases/ok/import_block.corb"), Okay)
-    , ("import_except", decodeUtf8 $(embedFileRelative "test/Cases/ok/import_except.corb"), Okay)
-    , ("term_decl", decodeUtf8 $(embedFileRelative "test/Cases/ok/term_decl.corb"), Okay)
-    , ("term_decl_annotated", decodeUtf8 $(embedFileRelative "test/Cases/ok/term_decl_annotated.corb"), Okay)
-    , ("lambda", decodeUtf8 $(embedFileRelative "test/Cases/ok/lambda.corb"), Okay)
-    , ("lambda_case", decodeUtf8 $(embedFileRelative "test/Cases/ok/lambda_case.corb"), Okay)
-    , ("case_expr", decodeUtf8 $(embedFileRelative "test/Cases/ok/case_expr.corb"), Okay)
-    , ("do_block", decodeUtf8 $(embedFileRelative "test/Cases/ok/do_block.corb"), Okay)
-    , ("do_block_mid", decodeUtf8 $(embedFileRelative "test/Cases/ok/do_block_mid.corb"), Okay)
-    , ("list", decodeUtf8 $(embedFileRelative "test/Cases/ok/list.corb"), Okay)
-    , ("tuple", decodeUtf8 $(embedFileRelative "test/Cases/ok/tuple.corb"), Okay)
-    , ("infix", decodeUtf8 $(embedFileRelative "test/Cases/ok/infix.corb"), Okay)
-    , ("section_l", decodeUtf8 $(embedFileRelative "test/Cases/ok/section_l.corb"), Okay)
-    , ("section_r", decodeUtf8 $(embedFileRelative "test/Cases/ok/section_r.corb"), Okay)
-    , ("annotation", decodeUtf8 $(embedFileRelative "test/Cases/ok/annotation.corb"), Okay)
-    , ("hole", decodeUtf8 $(embedFileRelative "test/Cases/ok/hole.corb"), Okay)
-    , ("where_block", decodeUtf8 $(embedFileRelative "test/Cases/ok/where_block.corb"), Okay)
-    , ("data_decl", decodeUtf8 $(embedFileRelative "test/Cases/ok/data_decl.corb"), Okay)
-    , ("data_decl_block", decodeUtf8 $(embedFileRelative "test/Cases/ok/data_decl_block.corb"), Okay)
-    , ("newtype_decl", decodeUtf8 $(embedFileRelative "test/Cases/ok/newtype_decl.corb"), Okay)
-    , ("type_alias", decodeUtf8 $(embedFileRelative "test/Cases/ok/type_alias.corb"), Okay)
-    , ("constraint_alias", decodeUtf8 $(embedFileRelative "test/Cases/ok/constraint_alias.corb"), Okay)
-    , ("class_decl", decodeUtf8 $(embedFileRelative "test/Cases/ok/class_decl.corb"), Okay)
-    , ("class_decl_default", decodeUtf8 $(embedFileRelative "test/Cases/ok/class_decl_default.corb"), Okay)
-    , ("class_associated_type", decodeUtf8 $(embedFileRelative "test/Cases/ok/class_associated_type.corb"), Okay)
-    , ("instance_decl", decodeUtf8 $(embedFileRelative "test/Cases/ok/instance_decl.corb"), Okay)
-    , ("forall_type", decodeUtf8 $(embedFileRelative "test/Cases/ok/forall_type.corb"), Okay)
-    , ("exists_type", decodeUtf8 $(embedFileRelative "test/Cases/ok/exists_type.corb"), Okay)
-    , ("list_type", decodeUtf8 $(embedFileRelative "test/Cases/ok/list_type.corb"), Okay)
-    , ("tuple_type", decodeUtf8 $(embedFileRelative "test/Cases/ok/tuple_type.corb"), Okay)
-    , ("constraint_type", decodeUtf8 $(embedFileRelative "test/Cases/ok/constraint_type.corb"), Okay)
-    , ("type_app", decodeUtf8 $(embedFileRelative "test/Cases/ok/type_app.corb"), Okay)
-    , ("fun_type", decodeUtf8 $(embedFileRelative "test/Cases/ok/fun_type.corb"), Okay)
-    , ("type_lambda", decodeUtf8 $(embedFileRelative "test/Cases/ok/type_lambda.corb"), Okay)
-    , ("type_app_expr", decodeUtf8 $(embedFileRelative "test/Cases/ok/type_app_expr.corb"), Okay)
-    , ("type_app_multi", decodeUtf8 $(embedFileRelative "test/Cases/ok/type_app_multi.corb"), Okay)
-    , ("prefix_unary", decodeUtf8 $(embedFileRelative "test/Cases/ok/prefix_unary.corb"), Okay)
-    , ("postfix_unary", decodeUtf8 $(embedFileRelative "test/Cases/ok/postfix_unary.corb"), Okay)
-    , ("unary_precedence", decodeUtf8 $(embedFileRelative "test/Cases/ok/unary_precedence.corb"), Okay)
-    , ("class_superclass", decodeUtf8 $(embedFileRelative "test/Cases/ok/class_superclass.corb"), Okay)
-    , ("class_set_context", decodeUtf8 $(embedFileRelative "test/Cases/ok/class_set_context.corb"), Okay)
-    , ("hidden_decl", decodeUtf8 $(embedFileRelative "test/Cases/ok/hidden_decl.corb"), Okay)
-    , ("unclosed_list", decodeUtf8 $(embedFileRelative "test/Cases/parseerr/unclosed_list.corb"), ParseE ParseSyntaxError)
-    , ("unclosed_tuple", decodeUtf8 $(embedFileRelative "test/Cases/parseerr/unclosed_tuple.corb"), ParseE ParseSyntaxError)
-    , ("do_block_ends_bind", decodeUtf8 $(embedFileRelative "test/Cases/ok/do_block_ends_bind.corb"), Okay)
-    , ("term_decl_no_body", decodeUtf8 $(embedFileRelative "test/Cases/parseerr/term_decl_no_body.corb"), ParseE ParseSyntaxError)
-    , ("infix_self", decodeUtf8 $(embedFileRelative "test/Cases/parseerr/infix_self.corb"), ParseE ParseSyntaxError)
-    ]
+-- does the actual outcome satisfy the expectation?
+satisfies :: TestOutcome -> TestOutcome -> Bool
+satisfies actual expected = case expected of
+    LexE k -> actual == LexE k
+    ParseE k -> actual == ParseE k
+    TypeCheckE k -> actual == TypeCheckE k
+    Parses -> case actual of
+        LexE _ -> False
+        ParseE _ -> False
+        _ -> True
+    TypeChecks -> actual == TypeChecks
+
+runCase :: TestOutcome -> String -> Assertion
+runCase expected src =
+    let actual = runFrontend src
+     in if satisfies actual expected
+            then pass
+            else assertFailure $ "expected " <> show expected <> " but got " <> show actual
+
+-- ---------------------------------------------------------------------------
+-- file case groups
+-- ---------------------------------------------------------------------------
+
+-- cases that should fail in the lexer
+lexErrTests :: TestTree
+lexErrTests =
+    testGroup
+        "Lex Errors"
+        [ testCase "bad_fixity" $ runCase (LexE (LexBadFixity "⦿⌟")) (decodeUtf8 $(embedFileRelative "test/Cases/lexerr/bad_fixity.corb"))
+        , testCase "indent_jump" $ runCase (LexE (LexLayoutJumped 2)) (decodeUtf8 $(embedFileRelative "test/Cases/lexerr/indent_jump.corb"))
+        , testCase "odd_indent" $ runCase (LexE (LexInvalidIndentLevel 1)) (decodeUtf8 $(embedFileRelative "test/Cases/lexerr/odd_indent.corb"))
+        , testCase "suffix_alone" $ runCase (LexE (LexUnexpected '′')) (decodeUtf8 $(embedFileRelative "test/Cases/lexerr/suffix_alone.corb"))
+        , testCase "unterminated_char" $ runCase (LexE (LexUnexpected '\'')) (decodeUtf8 $(embedFileRelative "test/Cases/lexerr/unterminated_char.corb"))
+        , testCase "unterminated_guillemet" $ runCase (LexE (LexUnterminated QGuillemet)) (decodeUtf8 $(embedFileRelative "test/Cases/lexerr/unterminated_guillemet.corb"))
+        , testCase "unterminated_ornate" $ runCase (LexE (LexUnterminated QPrimitive)) (decodeUtf8 $(embedFileRelative "test/Cases/lexerr/unterminated_ornate.corb"))
+        , testCase "unterminated_text" $ runCase (LexE (LexUnexpected '"')) (decodeUtf8 $(embedFileRelative "test/Cases/lexerr/unterminated_text.corb"))
+        ]
+
+-- cases that should fail in the parser
+parseErrTests :: TestTree
+parseErrTests =
+    testGroup
+        "Parse Errors"
+        [ testCase "missing_module_glyph" $ runCase (ParseE ParseSyntaxError) (decodeUtf8 $(embedFileRelative "test/Cases/parseerr/missing_module_glyph.corb"))
+        , testCase "missing_module_name" $ runCase (ParseE ParseSyntaxError) (decodeUtf8 $(embedFileRelative "test/Cases/parseerr/missing_module_name.corb"))
+        , testCase "import_missing_path" $ runCase (ParseE ParseSyntaxError) (decodeUtf8 $(embedFileRelative "test/Cases/parseerr/import_missing_path.corb"))
+        , testCase "import_block_unclosed" $ runCase (ParseE ParseSyntaxError) (decodeUtf8 $(embedFileRelative "test/Cases/parseerr/import_block_unclosed.corb"))
+        , testCase "unclosed_list" $ runCase (ParseE ParseSyntaxError) (decodeUtf8 $(embedFileRelative "test/Cases/parseerr/unclosed_list.corb"))
+        , testCase "unclosed_tuple" $ runCase (ParseE ParseSyntaxError) (decodeUtf8 $(embedFileRelative "test/Cases/parseerr/unclosed_tuple.corb"))
+        , testCase "term_decl_no_body" $ runCase (ParseE ParseSyntaxError) (decodeUtf8 $(embedFileRelative "test/Cases/parseerr/term_decl_no_body.corb"))
+        , testCase "infix_self" $ runCase (ParseE ParseSyntaxError) (decodeUtf8 $(embedFileRelative "test/Cases/parseerr/infix_self.corb"))
+        ]
+
+-- cases that should at least lex and parse
+parseTests :: TestTree
+parseTests =
+    testGroup
+        "Parses"
+        [ testCase "import_block_no_dedent" $ runCase Parses (decodeUtf8 $(embedFileRelative "test/Cases/parses/import_block_no_dedent.corb"))
+        , testCase "bare_module" $ runCase Parses (decodeUtf8 $(embedFileRelative "test/Cases/parses/bare_module.corb"))
+        , testCase "dotted_module" $ runCase Parses (decodeUtf8 $(embedFileRelative "test/Cases/parses/dotted_module.corb"))
+        , testCase "import_simple" $ runCase Parses (decodeUtf8 $(embedFileRelative "test/Cases/parses/import_simple.corb"))
+        , testCase "import_reexport" $ runCase Parses (decodeUtf8 $(embedFileRelative "test/Cases/parses/import_reexport.corb"))
+        , testCase "import_qualified" $ runCase Parses (decodeUtf8 $(embedFileRelative "test/Cases/parses/import_qualified.corb"))
+        , testCase "import_block" $ runCase Parses (decodeUtf8 $(embedFileRelative "test/Cases/parses/import_block.corb"))
+        , testCase "import_except" $ runCase Parses (decodeUtf8 $(embedFileRelative "test/Cases/parses/import_except.corb"))
+        , testCase "term_decl" $ runCase Parses (decodeUtf8 $(embedFileRelative "test/Cases/parses/term_decl.corb"))
+        , testCase "term_decl_annotated" $ runCase Parses (decodeUtf8 $(embedFileRelative "test/Cases/parses/term_decl_annotated.corb"))
+        , testCase "lambda" $ runCase Parses (decodeUtf8 $(embedFileRelative "test/Cases/parses/lambda.corb"))
+        , testCase "lambda_case" $ runCase Parses (decodeUtf8 $(embedFileRelative "test/Cases/parses/lambda_case.corb"))
+        , testCase "case_expr" $ runCase Parses (decodeUtf8 $(embedFileRelative "test/Cases/parses/case_expr.corb"))
+        , testCase "do_block" $ runCase Parses (decodeUtf8 $(embedFileRelative "test/Cases/parses/do_block.corb"))
+        , testCase "do_block_mid" $ runCase Parses (decodeUtf8 $(embedFileRelative "test/Cases/parses/do_block_mid.corb"))
+        , testCase "do_block_ends_bind" $ runCase Parses (decodeUtf8 $(embedFileRelative "test/Cases/parses/do_block_ends_bind.corb"))
+        , testCase "list" $ runCase Parses (decodeUtf8 $(embedFileRelative "test/Cases/parses/list.corb"))
+        , testCase "tuple" $ runCase Parses (decodeUtf8 $(embedFileRelative "test/Cases/parses/tuple.corb"))
+        , testCase "infix" $ runCase Parses (decodeUtf8 $(embedFileRelative "test/Cases/parses/infix.corb"))
+        , testCase "section_l" $ runCase Parses (decodeUtf8 $(embedFileRelative "test/Cases/parses/section_l.corb"))
+        , testCase "section_r" $ runCase Parses (decodeUtf8 $(embedFileRelative "test/Cases/parses/section_r.corb"))
+        , testCase "annotation" $ runCase Parses (decodeUtf8 $(embedFileRelative "test/Cases/parses/annotation.corb"))
+        , testCase "hole" $ runCase Parses (decodeUtf8 $(embedFileRelative "test/Cases/parses/hole.corb"))
+        , testCase "where_block" $ runCase Parses (decodeUtf8 $(embedFileRelative "test/Cases/parses/where_block.corb"))
+        , testCase "data_decl" $ runCase Parses (decodeUtf8 $(embedFileRelative "test/Cases/parses/data_decl.corb"))
+        , testCase "data_decl_block" $ runCase Parses (decodeUtf8 $(embedFileRelative "test/Cases/parses/data_decl_block.corb"))
+        , testCase "newtype_decl" $ runCase Parses (decodeUtf8 $(embedFileRelative "test/Cases/parses/newtype_decl.corb"))
+        , testCase "type_alias" $ runCase Parses (decodeUtf8 $(embedFileRelative "test/Cases/parses/type_alias.corb"))
+        , testCase "constraint_alias" $ runCase Parses (decodeUtf8 $(embedFileRelative "test/Cases/parses/constraint_alias.corb"))
+        , testCase "class_decl" $ runCase Parses (decodeUtf8 $(embedFileRelative "test/Cases/parses/class_decl.corb"))
+        , testCase "class_decl_default" $ runCase Parses (decodeUtf8 $(embedFileRelative "test/Cases/parses/class_decl_default.corb"))
+        , testCase "class_associated_type" $ runCase Parses (decodeUtf8 $(embedFileRelative "test/Cases/parses/class_associated_type.corb"))
+        , testCase "instance_decl" $ runCase Parses (decodeUtf8 $(embedFileRelative "test/Cases/parses/instance_decl.corb"))
+        , testCase "forall_type" $ runCase Parses (decodeUtf8 $(embedFileRelative "test/Cases/parses/forall_type.corb"))
+        , testCase "exists_type" $ runCase Parses (decodeUtf8 $(embedFileRelative "test/Cases/parses/exists_type.corb"))
+        , testCase "list_type" $ runCase Parses (decodeUtf8 $(embedFileRelative "test/Cases/parses/list_type.corb"))
+        , testCase "tuple_type" $ runCase Parses (decodeUtf8 $(embedFileRelative "test/Cases/parses/tuple_type.corb"))
+        , testCase "constraint_type" $ runCase Parses (decodeUtf8 $(embedFileRelative "test/Cases/parses/constraint_type.corb"))
+        , testCase "type_app" $ runCase Parses (decodeUtf8 $(embedFileRelative "test/Cases/parses/type_app.corb"))
+        , testCase "fun_type" $ runCase Parses (decodeUtf8 $(embedFileRelative "test/Cases/parses/fun_type.corb"))
+        , testCase "type_lambda" $ runCase Parses (decodeUtf8 $(embedFileRelative "test/Cases/parses/type_lambda.corb"))
+        , testCase "type_app_expr" $ runCase Parses (decodeUtf8 $(embedFileRelative "test/Cases/parses/type_app_expr.corb"))
+        , testCase "type_app_multi" $ runCase Parses (decodeUtf8 $(embedFileRelative "test/Cases/parses/type_app_multi.corb"))
+        , testCase "prefix_unary" $ runCase Parses (decodeUtf8 $(embedFileRelative "test/Cases/parses/prefix_unary.corb"))
+        , testCase "postfix_unary" $ runCase Parses (decodeUtf8 $(embedFileRelative "test/Cases/parses/postfix_unary.corb"))
+        , testCase "unary_precedence" $ runCase Parses (decodeUtf8 $(embedFileRelative "test/Cases/parses/unary_precedence.corb"))
+        , testCase "class_superclass" $ runCase Parses (decodeUtf8 $(embedFileRelative "test/Cases/parses/class_superclass.corb"))
+        , testCase "class_set_context" $ runCase Parses (decodeUtf8 $(embedFileRelative "test/Cases/parses/class_set_context.corb"))
+        , testCase "hidden_decl" $ runCase Parses (decodeUtf8 $(embedFileRelative "test/Cases/parses/hidden_decl.corb"))
+        ]
+
+-- cases that should fail in the typechecker
+typeCheckErrTests :: TestTree
+typeCheckErrTests =
+    testGroup
+        "Type Check Errors"
+        [ testCase "unbound_identifier" $ runCase (TypeCheckE (TcUnboundIdentifier (IdentRaw "x"))) (decodeUtf8 $(embedFileRelative "test/Cases/typecheckerr/unbound_identifier.corb"))
+        , testCase "duplicate_declaration" $ runCase (TypeCheckE (TcDuplicateDeclaration (IdentRaw "f"))) (decodeUtf8 $(embedFileRelative "test/Cases/typecheckerr/duplicate_declaration.corb"))
+        , testCase "occurs_check" $ runCase (TypeCheckE TcInfiniteType) (decodeUtf8 $(embedFileRelative "test/Cases/typecheckerr/occurs_check.corb"))
+        , testCase "unify_mismatch" $ runCase (TypeCheckE TcCouldNotUnify) (decodeUtf8 $(embedFileRelative "test/Cases/typecheckerr/unify_mismatch.corb"))
+        , testCase "annotation_mismatch" $ runCase (TypeCheckE TcCouldNotUnify) (decodeUtf8 $(embedFileRelative "test/Cases/typecheckerr/annotation_mismatch.corb"))
+        , testCase "illegal_type_app" $ runCase (TypeCheckE TcIllegalTypeApp) (decodeUtf8 $(embedFileRelative "test/Cases/typecheckerr/illegal_type_app.corb"))
+        , testCase "unbound_type_constructor" $ runCase (TypeCheckE (TcUnboundTypeConstructor (IdentRaw "Nope"))) (decodeUtf8 $(embedFileRelative "test/Cases/typecheckerr/unbound_type_constructor.corb"))
+        , testCase "unbound_class" $ runCase (TypeCheckE (TcUnboundClass (IdentRaw "NotAClass"))) (decodeUtf8 $(embedFileRelative "test/Cases/typecheckerr/unbound_class.corb"))
+        ]
+
+-- cases that should typecheck (with no implicit prelude)
+typeCheckTests :: TestTree
+typeCheckTests =
+    testGroup
+        "Type Checks"
+        [ testCase "identity" $ runCase TypeChecks (decodeUtf8 $(embedFileRelative "test/Cases/typechecks/identity.corb"))
+        , testCase "const" $ runCase TypeChecks (decodeUtf8 $(embedFileRelative "test/Cases/typechecks/const.corb"))
+        , testCase "apply" $ runCase TypeChecks (decodeUtf8 $(embedFileRelative "test/Cases/typechecks/apply.corb"))
+        , testCase "where" $ runCase TypeChecks (decodeUtf8 $(embedFileRelative "test/Cases/typechecks/where.corb"))
+        , testCase "hole" $ runCase TypeChecks (decodeUtf8 $(embedFileRelative "test/Cases/typechecks/hole.corb"))
+        , testCase "list" $ runCase TypeChecks (decodeUtf8 $(embedFileRelative "test/Cases/typechecks/list.corb"))
+        , testCase "tuple" $ runCase TypeChecks (decodeUtf8 $(embedFileRelative "test/Cases/typechecks/tuple.corb"))
+        , testCase "literals" $ runCase TypeChecks (decodeUtf8 $(embedFileRelative "test/Cases/typechecks/literals.corb"))
+        , testCase "annotated_lambda" $ runCase TypeChecks (decodeUtf8 $(embedFileRelative "test/Cases/typechecks/annotated_lambda.corb"))
+        , testCase "signature" $ runCase TypeChecks (decodeUtf8 $(embedFileRelative "test/Cases/typechecks/signature.corb"))
+        , testCase "forall_signature" $ runCase TypeChecks (decodeUtf8 $(embedFileRelative "test/Cases/typechecks/forall_signature.corb"))
+        , testCase "annotated_literal" $ runCase TypeChecks (decodeUtf8 $(embedFileRelative "test/Cases/typechecks/annotated_literal.corb"))
+        , testCase "lambda_case" $ runCase TypeChecks (decodeUtf8 $(embedFileRelative "test/Cases/typechecks/lambda_case.corb"))
+        , testCase "case_literals" $ runCase TypeChecks (decodeUtf8 $(embedFileRelative "test/Cases/typechecks/case_literals.corb"))
+        , testCase "sections" $ runCase TypeChecks (decodeUtf8 $(embedFileRelative "test/Cases/typechecks/sections.corb"))
+        , testCase "infix" $ runCase TypeChecks (decodeUtf8 $(embedFileRelative "test/Cases/typechecks/infix.corb"))
+        , testCase "type_lambda" $ runCase TypeChecks (decodeUtf8 $(embedFileRelative "test/Cases/typechecks/type_lambda.corb"))
+        , testCase "type_lambda_app" $ runCase TypeChecks (decodeUtf8 $(embedFileRelative "test/Cases/typechecks/type_lambda_app.corb"))
+        , testCase "mutual_recursion" $ runCase TypeChecks (decodeUtf8 $(embedFileRelative "test/Cases/typechecks/mutual_recursion.corb"))
+        , testCase "where_generalize" $ runCase TypeChecks (decodeUtf8 $(embedFileRelative "test/Cases/typechecks/where_generalize.corb"))
+        , testCase "mixed_signatures" $ runCase TypeChecks (decodeUtf8 $(embedFileRelative "test/Cases/typechecks/mixed_signatures.corb"))
+        ]
 
 caseTests :: TestTree
-caseTests = testGroup "File Cases" (map mkCase cases)
-  where
-    mkCase :: (String, String, TestOutcome) -> TestTree
-    mkCase (name, src, outcome) = testCase name (runCase outcome src)
+caseTests =
+    testGroup
+        "File Cases"
+        [ lexErrTests
+        , parseErrTests
+        , parseTests
+        , typeCheckErrTests
+        , typeCheckTests
+        ]

@@ -1,0 +1,3 @@
+▣ Foo
+f ≔ (g 1, g True)
+  g ≔ λx ↦ x
