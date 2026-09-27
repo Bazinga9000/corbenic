@@ -441,7 +441,7 @@ checkKnot binds k = do
             Just sig -> fst <$> realizeScheme sig return
             Nothing -> do
                 v <- freshMetavarTV (spanOf body) CKStar
-                return $ Scheme [v] [] (CTVar v)
+                return $ Scheme [] [] (CTVar v)
         return (name, scm)
 
     -- check bodies in the seeded environment
@@ -450,15 +450,17 @@ checkKnot binds k = do
             Just sig -> first Just <$> checkAgainstSignature sig body
             Nothing -> (Nothing,) <$> infer body
 
-    -- unify the fresh metavars against the body types and generalize
+    -- signed bindings already have their checked scheme; unsigned bindings unify
+    -- the monomorphic placeholder with the inferred body type, then generalize
     finalized <- forM (zip seeded checked) $ \((name, seedScm), (mScm, body')) -> do
-        scm <- case (seedScm, mScm) of
-            (Scheme [_] _ v, Nothing) -> do
+        scm <- case mScm of
+            Just scm -> return scm
+            Nothing -> do
                 let bt = exprType body'
-                unify v bt
+                case seedScm of
+                    Scheme [] [] placeholder -> unify placeholder bt
+                    _ -> throwError $ TypeCheckerError (spanOf body') $ TCBug "checkKnot: bad unsigned seed"
                 generalize bt
-            (_, Just scm) -> return scm
-            _ -> throwError $ TypeCheckerError (spanOf body') $ TCBug "checkKnot got an invalid scheme at finalize"
         return (name, scm, body')
 
     -- re-seed with the generalized schemes and run the continuation
