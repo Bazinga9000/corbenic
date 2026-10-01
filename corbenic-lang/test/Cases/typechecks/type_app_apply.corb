@@ -1,0 +1,4 @@
+▣ Foo
+k ⠛ ∀a b. a → b → a
+k ≔ λx ↦ λy ↦ x
+f ≔ k〈ℤ〉 5

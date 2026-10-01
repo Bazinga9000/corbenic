@@ -16,16 +16,45 @@ import Syntax.Literal
 import Syntax.Location
 import Syntax.Surface
 
--- create fresh names for each variable in the scheme, turn it into a type
-instantiate :: Scheme -> Tc CorbenicType
-instantiate (Scheme vs preds ty) = do
-    -- generate new tvars with the same span and kind for instantiation
-    vs' <- traverse (\(TypeVar _ spn k) -> freshMetavar spn k) vs
-    let s = Subst $ fromList $ zip vs vs'
-    -- assert the instantiated constraints
-    tellPreds $ apply s preds
-    -- instantiate the type
-    return $ apply s ty
+-- things that can be instantiated. that is, generally freshening universal qualifiers and
+-- creating a monotyped thing
+class Instantiable a where
+    type Instance a
+    instantiate :: a -> Tc (Instance a)
+
+instance Instantiable Scheme where
+  type Instance Scheme = CorbenicType
+  -- create fresh names for each variable in the scheme, turn it into a type
+  instantiate :: Scheme -> Tc CorbenicType
+  instantiate (Scheme vs preds ty) = do
+      -- generate new tvars with the same span and kind for instantiation
+      vs' <- traverse (\(TypeVar _ spn k) -> freshMetavar spn k) vs
+      let s = Subst $ fromList $ zip vs vs'
+      -- assert the instantiated constraints
+      tellPreds $ apply s preds
+      -- instantiate the type
+      return $ apply s ty
+
+instance Instantiable CorbenicType where
+    type Instance CorbenicType = CorbenicType
+
+    -- freshen the spine of quantifiers/constraints and sub into the body
+    instantiate (CTForall _ v body) = do
+        v' <- freshMetavar (spanOf v) (tvKind v)
+        instantiate $ apply (one (v, v')) body
+    instantiate (CTConstrained _ preds body) = do
+        tellPreds preds
+        instantiate body
+    instantiate ty = return ty
+
+
+instance Instantiable (SurfaceExpr (Span, CorbenicType)) where
+    type Instance (SurfaceExpr (Span, CorbenicType)) = SurfaceExpr (Span, CorbenicType)
+    -- instantiate the type annotation
+    instantiate e = do
+        let (sp, _) = e ^. exprAnn
+        t <- instantiate (exprType e)
+        return $ set exprAnn (sp, t) e
 
 -- extract all universally quantified vars and predicates
 -- from a type
@@ -63,17 +92,19 @@ generalize t = do
 monomorphize :: CorbenicType -> Scheme
 monomorphize t = let (tvs, preds, body) = unrollSpine t in Scheme tvs preds body
 
--- attempt to infer a type for an expression
+-- infer the *monomorphic* type of an expression
 infer :: SurfaceExpr Span -> Tc (SurfaceExpr (Span, CorbenicType))
-infer (SELiteral l) = inferLiteral l
-infer (SEIdentifier (Annotated sp ident)) = do
+infer e = inferPoly e >>= instantiate
+
+-- infer the *polymorphic* type of an expression.
+inferPoly :: SurfaceExpr Span -> Tc (SurfaceExpr (Span, CorbenicType))
+inferPoly (SELiteral l) = inferLiteral l
+inferPoly (SEIdentifier (Annotated sp ident)) = do
     rho <- askFor tcTerms
     case M.lookup ident rho of
-        Just scm -> do
-            t <- instantiate scm
-            return $ SEIdentifier (Annotated (sp, t) ident)
+        Just scm -> return $ SEIdentifier (Annotated (sp, schemeToType scm) ident)
         Nothing -> throwError $ TypeCheckerError sp (TCUnboundIdentifier ident)
-infer (SELambda sp (Annotated spi ident) body) = do
+inferPoly (SELambda sp (Annotated spi ident) body) = do
     a <- freshMetavarTV spi CKStar
     let a' = CTVar a
     b <- freshMetavar (spanOf body) CKStar
@@ -82,7 +113,7 @@ infer (SELambda sp (Annotated spi ident) body) = do
     let ident' = Annotated (spi, a') ident
     let t = mkFun sp a' b
     return $ SELambda (sp, t) ident' body'
-infer (SEApp sp f x) = do
+inferPoly (SEApp sp f x) = do
     f' <- infer f
     x' <- infer x
     let tf = exprType f'
@@ -90,15 +121,15 @@ infer (SEApp sp f x) = do
     r <- freshMetavar sp CKStar
     unify tf (mkFun sp tx r)
     return $ SEApp (sp, r) f' x'
-infer (SETypeLambda sp (Annotated spi ident) body) = do
+inferPoly (SETypeLambda sp (Annotated spi ident) body) = do
     tv <- freshKind >>= freshMetavarTV spi
     let withTypeVar = over tcTypeVars (M.insert ident tv)
     body' <- local withTypeVar (infer body)
     let ident' = Annotated (spi, CTVar tv) ident
     let t = CTForall sp tv (exprType body')
     return $ SETypeLambda (sp, t) ident' body'
-infer (SETypeApp sp e t) = do
-    e' <- infer e
+inferPoly (SETypeApp sp e t) = do
+    e' <- inferPoly e
     t' <- realize t
     case exprType e' of
         CTForall _ v body -> do
@@ -106,34 +137,34 @@ infer (SETypeApp sp e t) = do
             -- the same polymorphic value can be applied
             -- at many types
             -- TODO: verify the kinds of v and t' match
-            let result = apply (one (v, t')) body
+            result <- dischargeConstraints $ apply (one (v, t')) body
             return $ SETypeApp (sp, result) e' t
         _ -> throwError $ TypeCheckerError sp (TCIllegalTypeApp (exprType e'))
-infer (SEWhere sp e decls) = do
+inferPoly (SEWhere sp e decls) = do
     generalizeWhereDecls decls $ \decls' -> do
         e' <- infer e
         return $ SEWhere (sp, exprType e') e' decls'
-infer (SEDo sp sdis) = checkDo sp sdis Nothing
-infer (SECase sp scrut branches) = do
+inferPoly (SEDo sp sdis) = checkDo sp sdis Nothing
+inferPoly (SECase sp scrut branches) = do
     scrut' <- infer scrut
     let scrutTy = exprType scrut'
     r <- freshMetavar sp CKStar
     branches' <- mapM (checkBranch scrutTy r) branches
     return $ SECase (sp, r) scrut' branches'
-infer (SELambdaCase sp branches) = do
+inferPoly (SELambdaCase sp branches) = do
     scrutTy <- freshMetavar sp CKStar
     r <- freshMetavar sp CKStar
     branches' <- mapM (checkBranch scrutTy r) branches
     return $ SELambdaCase (sp, mkFun sp scrutTy r) branches'
-infer (SEList sp es) = do
+inferPoly (SEList sp es) = do
     a <- freshMetavar sp CKStar
     es' <- mapM (`check` a) es
     return $ SEList (sp, mkList sp a) es'
-infer (SETuple sp es) = do
+inferPoly (SETuple sp es) = do
     es' <- mapM infer es
     let t = CTTuple sp $ fmap exprType es'
     return $ SETuple (sp, t) es'
-infer (SEOpSectionL sp e (Annotated spi ident)) = do
+inferPoly (SEOpSectionL sp e (Annotated spi ident)) = do
     e' <- infer e
     opSchm <- M.lookup ident <$> askFor tcTerms
     case opSchm of
@@ -145,7 +176,7 @@ infer (SEOpSectionL sp e (Annotated spi ident)) = do
             c <- freshMetavar sp CKStar
             unify opTy (mkFun sp a (mkFun sp b c))
             return $ SEOpSectionL (sp, mkFun sp b c) e' (Annotated (spi, opTy) ident)
-infer (SEOpSectionR sp (Annotated spi ident) e) = do
+inferPoly (SEOpSectionR sp (Annotated spi ident) e) = do
     e' <- infer e
     opSchm <- M.lookup ident <$> askFor tcTerms
     case opSchm of
@@ -157,12 +188,12 @@ infer (SEOpSectionR sp (Annotated spi ident) e) = do
             c <- freshMetavar sp CKStar
             unify opTy (mkFun sp a (mkFun sp b c))
             return $ SEOpSectionR (sp, mkFun sp a c) (Annotated (spi, opTy) ident) e'
-infer (SEInfix sp l operand r) = infer (SEApp sp (SEApp sp (SEIdentifier operand) l) r)
-infer (SEAnnotation ann e sty) = do
+inferPoly (SEInfix sp l operand r) = inferPoly (SEApp sp (SEApp sp (SEIdentifier operand) l) r)
+inferPoly (SEAnnotation ann e sty) = do
     (scm, skolems, e') <- realizeSkolemizedScheme sty $ \bodyTy _ -> check e bodyTy
     checkSkolemEscape ann (S.fromList skolems)
     return $ SEAnnotation (ann, schemeToType scm) e' sty
-infer (SEHole sp) = freshMetavar sp CKStar >>= \t -> return . SEHole $ (sp, t)
+inferPoly (SEHole sp) = freshMetavar sp CKStar >>= \t -> return . SEHole $ (sp, t)
 
 -- check an expression against a known type
 check :: SurfaceExpr Span -> CorbenicType -> Tc (SurfaceExpr (Span, CorbenicType))
@@ -410,6 +441,11 @@ dumbCheck e t = do
     e' <- infer e
     unify (exprType e') t
     return e'
+
+-- emit the top-level constraints of a type, returning the body
+dischargeConstraints :: CorbenicType -> Tc CorbenicType
+dischargeConstraints (CTConstrained _ preds body) = tellPreds preds >> return body
+dischargeConstraints ty = return ty
 
 -- generate the type for Quintessable literals (which is to say, all of them)
 mkQuintessableLiteral :: Located Literal -> PrimType -> Tc (SurfaceExpr (Span, CorbenicType))

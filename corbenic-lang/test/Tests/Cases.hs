@@ -195,7 +195,7 @@ typeCheckErrTests =
         , testCase "occurs_check" $ runCase (TypeCheckE TcInfiniteType) (decodeUtf8 $(embedFileRelative "test/Cases/typecheckerr/occurs_check.corb"))
         , testCase "unify_mismatch" $ runCase (TypeCheckE TcCouldNotUnify) (decodeUtf8 $(embedFileRelative "test/Cases/typecheckerr/unify_mismatch.corb"))
         , testCase "annotation_mismatch" $ runCase (TypeCheckE TcCouldNotUnify) (decodeUtf8 $(embedFileRelative "test/Cases/typecheckerr/annotation_mismatch.corb"))
-        , testCase "illegal_type_app" $ runCase (TypeCheckE TcIllegalTypeApp) (decodeUtf8 $(embedFileRelative "test/Cases/typecheckerr/illegal_type_app.corb"))
+        , testCase "type_app_monomorphic" $ runCase (TypeCheckE TcIllegalTypeApp) (decodeUtf8 $(embedFileRelative "test/Cases/typecheckerr/type_app_monomorphic.corb"))
         , testCase "unbound_type_constructor" $ runCase (TypeCheckE (TcUnboundTypeConstructor (IdentRaw "Nope"))) (decodeUtf8 $(embedFileRelative "test/Cases/typecheckerr/unbound_type_constructor.corb"))
         , testCase "unbound_class" $ runCase (TypeCheckE (TcUnboundClass (IdentRaw "NotAClass"))) (decodeUtf8 $(embedFileRelative "test/Cases/typecheckerr/unbound_class.corb"))
         ]
@@ -226,6 +226,10 @@ typeCheckTests =
         , testCase "mutual_recursion" $ runCase TypeChecks (decodeUtf8 $(embedFileRelative "test/Cases/typechecks/mutual_recursion.corb"))
         , testCase "where_generalize" $ runCase TypeChecks (decodeUtf8 $(embedFileRelative "test/Cases/typechecks/where_generalize.corb"))
         , testCase "mixed_signatures" $ runCase TypeChecks (decodeUtf8 $(embedFileRelative "test/Cases/typechecks/mixed_signatures.corb"))
+        , testCase "type_app_value" $ runCase TypeChecks (decodeUtf8 $(embedFileRelative "test/Cases/typechecks/type_app_value.corb"))
+        , testCase "type_app_multi" $ runCase TypeChecks (decodeUtf8 $(embedFileRelative "test/Cases/typechecks/type_app_multi.corb"))
+        , testCase "type_app_apply" $ runCase TypeChecks (decodeUtf8 $(embedFileRelative "test/Cases/typechecks/type_app_apply.corb"))
+        , testCase "type_lambda_apply" $ runCase TypeChecks (decodeUtf8 $(embedFileRelative "test/Cases/typechecks/type_lambda_apply.corb"))
         ]
 
 caseTests :: TestTree
