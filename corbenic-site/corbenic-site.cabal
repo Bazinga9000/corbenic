@@ -20,7 +20,7 @@ common shared-config
     build-depends:
         base >= 4.14 && < 5,
         text,
-        corbenic-prelude
+        corbenic-common
     mixins:
         base hiding (Prelude)
 

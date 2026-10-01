@@ -43,7 +43,7 @@ library
                     , containers
                     , megaparsec
                     , parser-combinators
-                    , corbenic-prelude
+                    , corbenic-common
     exposed-modules:   Frontend.Diagnostics
                      , Frontend.Flags
                      , Frontend.Lexer
@@ -82,7 +82,7 @@ test-suite test-corbenic
                     , Tests.Cases
                     , Tests.Fixity
     build-depends:    corbenic-lang
-                    , corbenic-prelude
+                    , corbenic-common
                     , file-embed
                     , megaparsec
                     , tasty

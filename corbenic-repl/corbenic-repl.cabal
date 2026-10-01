@@ -33,5 +33,5 @@ executable corbenic
     main-is:          Main.hs
     hs-source-dirs:   app
     build-depends:    corbenic-lang
-                    , corbenic-prelude
+                    , corbenic-common
                     , haskeline

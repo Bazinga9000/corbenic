@@ -1,5 +1,5 @@
 packages:
   corbenic-lang/
   corbenic-repl/
-  corbenic-prelude/
+  corbenic-common/
   corbenic-site/
