@@ -9,6 +9,7 @@ import Frontend.TypeChecker.Seed
 import Frontend.TypeChecker.Subst
 import Frontend.TypeChecker.Tc
 import Frontend.TypeChecker.Types
+import Frontend.TypeChecker.KindChecking
 import Syntax.Identifier
 import Syntax.Location
 import Syntax.Surface
@@ -37,34 +38,23 @@ isHigherRank t = go (stripSpine t)
     go'' (SurfaceClassApp _ _ ts) = any go ts
 
 -- realize a parsed type into the internal type representation
+-- also performs kind checking
 realize :: SurfaceType Span -> Tc CorbenicType
 realize st = case isHigherRank st of
     True -> throwError $ TypeCheckerError (spanOf st) (TCNYI "higher rank types")
-    False -> case st of
-        (STName (Annotated sp ident)) -> resolveTypeName sp ident
-        (STApp sp t1 t2) -> do
-            t1' <- realize t1
-            t2' <- realize t2
-            return $ CTApp sp t1' t2'
-        (STFun sp t1 t2) -> do
-            t1' <- realize t1
-            t2' <- realize t2
-            return $ mkFun sp t1' t2'
-        (STList sp t) -> do
-            t' <- realize t
-            return $ mkList sp t'
-        (STTuple sp tys) -> do
-            tys' <- mapM realize tys
-            return $ CTTuple sp tys'
-        (STConstraint sp ctx) -> do
-            preds <- realizeContext ctx
-            pure (CTPred sp preds)
-        (STConstrained sp ctx ty) -> do
-            preds <- realizeContext ctx
-            ty' <- realize ty
-            pure (CTConstrained sp preds ty')
-        (STForall sp idents ty) -> realizeQuantified CTForall sp (toList idents) (realize ty)
-        (STExists sp idents ty) -> realizeQuantified CTExists sp (toList idents) (realize ty)
+    False -> realize' st >>= (\t -> kindOf t >> return t)
+
+-- realize without kind checking
+realize' :: SurfaceType Span -> Tc CorbenicType
+realize' (STName (Annotated sp ident)) = resolveTypeName sp ident
+realize' (STApp sp t1 t2) = CTApp sp <$> realize' t1 <*> realize' t2
+realize' (STFun sp t1 t2) = mkFun sp <$> realize' t1 <*> realize' t2
+realize' (STList sp t) = mkList sp <$> realize' t
+realize' (STTuple sp tys) = CTTuple sp <$> mapM realize' tys
+realize' (STConstraint sp ctx) = CTPred sp <$> realizeContext ctx
+realize' (STConstrained sp ctx ty) = CTConstrained sp <$> realizeContext ctx <*> realize' ty
+realize' (STForall sp idents ty) = realizeQuantified CTForall sp (toList idents) (realize' ty)
+realize' (STExists sp idents ty) = realizeQuantified CTExists sp (toList idents) (realize' ty)
 
 -- realize a parsed ∀ or ∃ (which can quantify over mutliple variables at once)
 -- into a nested string of internal representation which can only quantify over one at a time

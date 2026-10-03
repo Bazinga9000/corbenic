@@ -1,0 +1,4 @@
+▣ Foo
+k ⠛ ∀f a. f a → f a
+k ≔ λx ↦ x
+g ≔ k〈ℤ〉

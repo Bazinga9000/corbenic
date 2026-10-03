@@ -11,6 +11,7 @@ import Frontend.TypeChecker.Subst
 import Frontend.TypeChecker.Tc
 import Frontend.TypeChecker.Types
 import Frontend.TypeChecker.Unify
+import Frontend.TypeChecker.KindChecking
 import Syntax.Identifier
 import Syntax.Literal
 import Syntax.Location
@@ -28,7 +29,7 @@ instance Instantiable Scheme where
   instantiate :: Scheme -> Tc CorbenicType
   instantiate (Scheme vs preds ty) = do
       -- generate new tvars with the same span and kind for instantiation
-      vs' <- traverse (\(TypeVar _ spn k) -> freshMetavar spn k) vs
+      vs' <- traverse (\(TypeVar _ spn k) -> zonkKind k >>= freshMetavar spn) vs
       let s = Subst $ fromList $ zip vs vs'
       -- assert the instantiated constraints
       tellPreds $ apply s preds
@@ -40,7 +41,8 @@ instance Instantiable CorbenicType where
 
     -- freshen the spine of quantifiers/constraints and sub into the body
     instantiate (CTForall _ v body) = do
-        v' <- freshMetavar (spanOf v) (tvKind v)
+        k <- zonkKind $ tvKind v
+        v' <- freshMetavar (spanOf v) k
         instantiate $ apply (one (v, v')) body
     instantiate (CTConstrained _ preds body) = do
         tellPreds preds
@@ -76,7 +78,11 @@ unrollSpine ty = ([], [], ty)
 -- scheme as well
 generalize :: CorbenicType -> Tc Scheme
 generalize t = do
-    let (tvs, preds, body) = unrollSpine t
+    -- no kind polymorphism right now.
+    -- if we see a kind variable at generalize, it's ★
+    -- TODO: at some point, PolyKind this
+    t' <- defaultKind t
+    let (tvs, preds, body) = unrollSpine t'
     rho <- askFor tcTerms
     s <- use currentSubst
     let body' = apply s body
@@ -136,7 +142,9 @@ inferPoly (SETypeApp sp e t) = do
             -- local substitution, not a global unify so
             -- the same polymorphic value can be applied
             -- at many types
-            -- TODO: verify the kinds of v and t' match
+            kt' <- kindOf t'
+            kv <- kindOf v
+            unifyKind sp kt' kv
             result <- dischargeConstraints $ apply (one (v, t')) body
             return $ SETypeApp (sp, result) e' t
         _ -> throwError $ TypeCheckerError sp (TCIllegalTypeApp (exprType e'))
@@ -226,7 +234,6 @@ check (SETypeLambda sp i@(Annotated spi ident) body) t = do
                 -- the expected binder is a metavar: bind ident to a fresh rigid,
                 (rv, body') <- bindToRigid i (check body bt)
                 -- then bind the metavar to it
-                -- TODO: verify that tv and rv have the same kind
                 unify (CTVar tv) (CTVar rv)
                 let ty = CTForall sp rv (exprType body')
                 return $ SETypeLambda (sp, ty) (Annotated (spi, CTVar rv) ident) body'
@@ -296,7 +303,8 @@ checkAgainstSignature sig body = do
         tellPreds preds
         check body bodyTy
     checkSkolemEscape (spanOf sig) (S.fromList skolems)
-    return (scm, body')
+    scm' <- defaultKind scm
+    return (scm', body')
 
 -- Check a where block's declarations and run a continuation with the schemes in scope and the typed decls
 generalizeWhereDecls ::

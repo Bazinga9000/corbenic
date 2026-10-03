@@ -79,7 +79,7 @@ initialTcEnv fflags = TcEnv
     }
 
 initialTcState :: TcState
-initialTcState = TcState { _metaN = 0, _rigidN = 0, _kindN = 0, _currentSubst = mempty }
+initialTcState = TcState { _metaN = 0, _rigidN = 0, _kindN = 0, _currentSubst = mempty, _kindSubst = mempty }
 
 runTc :: FrontendFlags -> Tc a -> Either TypeCheckerError (a, [TypeCheckerWarning])
 runTc fflags m =

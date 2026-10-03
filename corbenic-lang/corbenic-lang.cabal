@@ -62,6 +62,8 @@ library
                      , Frontend.TypeChecker.Subst
                      , Frontend.TypeChecker.Unify
                      , Frontend.TypeChecker.Infer
+                     , Frontend.TypeChecker.KindSubst
+                     , Frontend.TypeChecker.KindChecking
                      , Frontend.IOPipeline
                      , Syntax.Chars
                      , Syntax.Documentation

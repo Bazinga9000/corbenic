@@ -7,6 +7,7 @@ import Data.Map qualified as M
 import Frontend.Flags
 import Frontend.TypeChecker.Error
 import Frontend.TypeChecker.Subst
+import Frontend.TypeChecker.KindSubst
 import Frontend.TypeChecker.Types
 import Syntax.Identifier
 import Syntax.Location
@@ -43,6 +44,7 @@ data TcState = TcState
     , _rigidN :: Natural
     , _kindN :: Natural
     , _currentSubst :: Subst
+    , _kindSubst :: KSubst
     }
 
 -- the type checker **environment**

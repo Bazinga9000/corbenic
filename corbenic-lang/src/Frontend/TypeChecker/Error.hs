@@ -14,6 +14,7 @@ data TypeCheckerErrorKind
     | TCUnboundClass Identifier
     | TCCouldNotUnify CorbenicType CorbenicType
     | TCInfiniteType TypeVar CorbenicType
+    | TCInfiniteKind KindVar CorbenicKind
     | TCIllegalTypeApp CorbenicType
     | TCMissingInstance Pred
     | TCAmbiguousType CorbenicType
@@ -22,6 +23,7 @@ data TypeCheckerErrorKind
     | TCSkolemEscape CorbenicType
     | TCPatternArity Identifier Natural Natural
     | TCBadDoBlockEnding
+    | TCKindMismatch CorbenicKind CorbenicKind
     | TCBug Text
     | TCNYI Text
     deriving (Eq, Ord, Show)
@@ -32,6 +34,7 @@ instance Pretty TypeCheckerErrorKind where
     prettyPrint (TCUnboundClass cls) = "Unbound class: " <> prettyPrint cls
     prettyPrint (TCCouldNotUnify t1 t2) = "Could not unify: " <> prettyPrint t1 <> " and " <> prettyPrint t2
     prettyPrint (TCInfiniteType a b) = "Infinite type: " <> prettyPrint a <> " occurs in " <> prettyPrint b
+    prettyPrint (TCInfiniteKind a b) = "Infinite kind: " <> prettyPrint a <> " occurs in " <> prettyPrint b
     prettyPrint (TCIllegalTypeApp t) = "Type application applied to expression of illegal type " <> prettyPrint t
     prettyPrint (TCMissingInstance predicate) = "Missing instance: " <> prettyPrint predicate
     prettyPrint (TCAmbiguousType t) = "Ambiguous type: " <> prettyPrint t
@@ -40,6 +43,7 @@ instance Pretty TypeCheckerErrorKind where
     prettyPrint (TCSkolemEscape tv) = "Skolem " <> prettyPrint tv <> " escaped its scope"
     prettyPrint (TCPatternArity ident expected got) = "Constructor " <> prettyPrint ident <> " should have " <> show expected <> (if expected == 1 then " argument" else " arguments") <> " but got " <> show got
     prettyPrint TCBadDoBlockEnding = "🝣 block must end with an expression"
+    prettyPrint (TCKindMismatch k1 k2) = "Could not match kind " <> prettyPrint k1 <> " " <> prettyPrint k2
     prettyPrint (TCBug txt) = "Type checker bug (file a bug report at https://github.com/Bazinga9000/corbenic): " <> txt
     prettyPrint (TCNYI txt) = txt <> " are not yet implemented. Sorry!"
 

@@ -7,6 +7,7 @@ import Frontend.TypeChecker.Error
 import Frontend.TypeChecker.Subst
 import Frontend.TypeChecker.Tc
 import Frontend.TypeChecker.Types
+import Frontend.TypeChecker.KindChecking
 import Relude.Unsafe (fromJust)
 import Syntax.Location
 
@@ -15,7 +16,11 @@ bind n t
     | isRigid n = throwError $ TypeCheckerError (spanOf n) (TCBug "bind on a rigid")
     | t == CTVar n = pass
     | n `S.member` ftv t = throwError (TypeCheckerError (spanOf n) (TCInfiniteType n t))
-    | otherwise = currentSubst %= extendSubst n t
+    | otherwise = do
+        tk <- kindOf t
+        nk <- kindOf n -- zonking happens within kindOf
+        unifyKind (spanOf n) tk nk
+        currentSubst %= extendSubst n t
 
 -- wrapper around the unifier, which applies the current subst
 unify :: CorbenicType -> CorbenicType -> Tc ()

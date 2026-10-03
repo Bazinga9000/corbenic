@@ -28,7 +28,9 @@ data TcErrorShape
     | TcUnboundClass Identifier
     | TcCouldNotUnify
     | TcInfiniteType
+    | TcInfiniteKind
     | TcIllegalTypeApp
+    | TcKindMismatch
     | TcMissingInstance
     | TcAmbiguousType
     | TcAmbiguousTypeVar
@@ -46,7 +48,9 @@ tcErrorShape (TCUnboundTypeConstructor i) = TcUnboundTypeConstructor i
 tcErrorShape (TCUnboundClass i) = TcUnboundClass i
 tcErrorShape (TCCouldNotUnify _ _) = TcCouldNotUnify
 tcErrorShape (TCInfiniteType _ _) = TcInfiniteType
+tcErrorShape (TCInfiniteKind _ _) = TcInfiniteKind
 tcErrorShape (TCIllegalTypeApp _) = TcIllegalTypeApp
+tcErrorShape (TCKindMismatch _ _) = TcKindMismatch
 tcErrorShape (TCMissingInstance _) = TcMissingInstance
 tcErrorShape (TCAmbiguousType _) = TcAmbiguousType
 tcErrorShape (TCAmbiguousTypeVar _ _) = TcAmbiguousTypeVar
@@ -199,6 +203,9 @@ typeCheckErrTests =
         , testCase "type_app_monomorphic" $ runCase (TypeCheckE TcIllegalTypeApp) (decodeUtf8 $(embedFileRelative "test/Cases/typecheckerr/type_app_monomorphic.corb"))
         , testCase "unbound_type_constructor" $ runCase (TypeCheckE (TcUnboundTypeConstructor (IdentRaw "Nope"))) (decodeUtf8 $(embedFileRelative "test/Cases/typecheckerr/unbound_type_constructor.corb"))
         , testCase "unbound_class" $ runCase (TypeCheckE (TcUnboundClass (IdentRaw "NotAClass"))) (decodeUtf8 $(embedFileRelative "test/Cases/typecheckerr/unbound_class.corb"))
+        , testCase "kind_mismatch" $ runCase (TypeCheckE TcKindMismatch) (decodeUtf8 $(embedFileRelative "test/Cases/typecheckerr/kind_mismatch.corb"))
+        , testCase "infinite_kind" $ runCase (TypeCheckE TcInfiniteKind) (decodeUtf8 $(embedFileRelative "test/Cases/typecheckerr/infinite_kind.corb"))
+        , testCase "type_app_kind_mismatch" $ runCase (TypeCheckE TcKindMismatch) (decodeUtf8 $(embedFileRelative "test/Cases/typecheckerr/type_app_kind_mismatch.corb"))
         ]
 
 -- cases that should typecheck (with no implicit prelude)
@@ -231,6 +238,8 @@ typeCheckTests =
         , testCase "type_app_multi" $ runCase TypeChecks (decodeUtf8 $(embedFileRelative "test/Cases/typechecks/type_app_multi.corb"))
         , testCase "type_app_apply" $ runCase TypeChecks (decodeUtf8 $(embedFileRelative "test/Cases/typechecks/type_app_apply.corb"))
         , testCase "type_lambda_apply" $ runCase TypeChecks (decodeUtf8 $(embedFileRelative "test/Cases/typechecks/type_lambda_apply.corb"))
+        , testCase "higher_kinded_signature" $ runCase TypeChecks (decodeUtf8 $(embedFileRelative "test/Cases/typechecks/higher_kinded_signature.corb"))
+        , testCase "higher_kinded_signature_multi" $ runCase TypeChecks (decodeUtf8 $(embedFileRelative "test/Cases/typechecks/higher_kinded_signature_multi.corb"))
         ]
 
 caseTests :: TestTree

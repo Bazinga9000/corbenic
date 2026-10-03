@@ -21,19 +21,3 @@ primitiveSeed =
         , (IdentRaw "⌘", PIO)
         , (IdentRaw "⎕", PList)
         ]
-
--- the kind of a primitive
-primKind :: PrimType -> CorbenicKind
-primKind PInteger = CKStar
-primKind PInteger32 = CKStar
-primKind PNatural = CKStar
-primKind PNatural32 = CKStar
-primKind PReal = CKStar
-primKind PRatio = CKArr CKStar CKStar
-primKind PBool = CKStar
-primKind PUnit = CKStar
-primKind PText = CKStar
-primKind PChar = CKStar
-primKind PFunction = CKArr CKStar (CKArr CKStar CKStar) -- ★ → ★ → ★
-primKind PIO = CKArr CKStar CKStar
-primKind PList = CKArr CKStar CKStar
