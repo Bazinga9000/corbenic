@@ -183,6 +183,7 @@ parseTests =
         , testCase "class_superclass" $ runCase Parses (decodeUtf8 $(embedFileRelative "test/Cases/parses/class_superclass.corb"))
         , testCase "class_set_context" $ runCase Parses (decodeUtf8 $(embedFileRelative "test/Cases/parses/class_set_context.corb"))
         , testCase "hidden_decl" $ runCase Parses (decodeUtf8 $(embedFileRelative "test/Cases/parses/hidden_decl.corb"))
+        , testCase "parenthesized_type" $ runCase Parses (decodeUtf8 $(embedFileRelative "test/Cases/parses/parenthesized_type.corb"))
         ]
 
 -- cases that should fail in the typechecker

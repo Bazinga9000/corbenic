@@ -429,6 +429,7 @@ parseSTAtom =
         <|> try parseSTTuple
         <|> try parseSTForall
         <|> try parseSTExists
+        <|> (tok TokLParen *> parseSurfaceType <* tok TokRParen)
 
 parseSTName :: Parser (SurfaceType Span)
 parseSTName = do
