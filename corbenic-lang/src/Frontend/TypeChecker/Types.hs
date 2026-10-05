@@ -98,6 +98,7 @@ data Scheme = Scheme [TypeVar] [Pred] CorbenicType
 data ClassDef = ClassDef
     { clsName :: Identifier
     , clsArity :: Natural -- number of type params
+    , clsParamKinds :: [CorbenicKind] -- kind of each parameter
     , clsSuper :: [Pred] -- superclass context (before ⇒)
     , clsMethods :: Map Identifier Scheme -- method schemes (class params in scope)
     , clsFamilies :: Map Identifier FamilyDef

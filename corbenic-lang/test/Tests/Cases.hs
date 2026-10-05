@@ -37,6 +37,7 @@ data TcErrorShape
     | TcDuplicateDeclaration Identifier
     | TcSkolemEscape
     | TcPatternArity Identifier Natural Natural
+    | TcClassArity Identifier Natural Natural
     | TcBadDoBlockEnding
     | TcBug Text
     | TcNYI Text
@@ -57,6 +58,7 @@ tcErrorShape (TCAmbiguousTypeVar _ _) = TcAmbiguousTypeVar
 tcErrorShape (TCDuplicateDeclaration i) = TcDuplicateDeclaration i
 tcErrorShape (TCSkolemEscape _) = TcSkolemEscape
 tcErrorShape (TCPatternArity i n m) = TcPatternArity i n m
+tcErrorShape (TCClassArity i n m) = TcClassArity i n m
 tcErrorShape TCBadDoBlockEnding = TcBadDoBlockEnding
 tcErrorShape (TCBug t) = TcBug t
 tcErrorShape (TCNYI t) = TcNYI t

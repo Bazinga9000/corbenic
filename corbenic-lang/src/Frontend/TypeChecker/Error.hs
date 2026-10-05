@@ -22,6 +22,7 @@ data TypeCheckerErrorKind
     | TCDuplicateDeclaration Identifier
     | TCSkolemEscape CorbenicType
     | TCPatternArity Identifier Natural Natural
+    | TCClassArity Identifier Natural Natural
     | TCBadDoBlockEnding
     | TCKindMismatch CorbenicKind CorbenicKind
     | TCBug Text
@@ -42,6 +43,7 @@ instance Pretty TypeCheckerErrorKind where
     prettyPrint (TCDuplicateDeclaration i) = "Duplicate declaration: " <> prettyPrint i
     prettyPrint (TCSkolemEscape tv) = "Skolem " <> prettyPrint tv <> " escaped its scope"
     prettyPrint (TCPatternArity ident expected got) = "Constructor " <> prettyPrint ident <> " should have " <> show expected <> (if expected == 1 then " argument" else " arguments") <> " but got " <> show got
+    prettyPrint (TCClassArity ident expected got) = "Class " <> prettyPrint ident <> " should have " <> show expected <> (if expected == 1 then " argument" else " arguments") <> " but got " <> show got
     prettyPrint TCBadDoBlockEnding = "🝣 block must end with an expression"
     prettyPrint (TCKindMismatch k1 k2) = "Could not match kind " <> prettyPrint k1 <> " " <> prettyPrint k2
     prettyPrint (TCBug txt) = "Type checker bug (file a bug report at https://github.com/Bazinga9000/corbenic): " <> txt

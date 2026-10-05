@@ -62,11 +62,11 @@ instance Kinded CorbenicType where
         k2 <- freshKind
         unifyKind sp kf (CKArr kx k2)
         return k2
-    kindOf (CTTuple _ _) = return CKStar
+    kindOf (CTTuple sp ts) = mapM kindOf ts >>= mapM (unifyKind sp CKStar) >> return CKStar
     kindOf (CTPred _ _) = return CKConstraint
-    kindOf (CTForall{}) = return CKStar
-    kindOf (CTExists{}) = return CKStar
-    kindOf (CTConstrained _ _ t) = kindOf t
+    kindOf (CTForall sp _ body) = kindOf body >>= unifyKind sp CKStar >> return CKStar
+    kindOf (CTExists sp _ body) = kindOf body >>= unifyKind sp CKStar >> return CKStar
+    kindOf (CTConstrained sp ps t) = mapM kindOf ps >>= mapM (unifyKind sp CKConstraint) >> kindOf t
 
 
     defaultKind (CTVar tv) = CTVar <$> defaultKind tv
@@ -80,7 +80,24 @@ instance Kinded CorbenicType where
     defaultKind (CTExists sp v t) = CTExists sp <$> defaultKind v <*> defaultKind t
     defaultKind (CTConstrained sp ps t) = CTConstrained sp <$> mapM defaultKind ps <*> defaultKind t
 instance Kinded Pred where
-    kindOf = const $ return CKConstraint
+    kindOf (Pred sp i ts) = do
+        classes <- askFor tcClasses
+        case M.lookup i classes of
+            Nothing -> throwError $ TypeCheckerError sp $ TCUnboundClass i
+            Just cls -> do
+                wanted <- mapM zonkKind $ clsParamKinds cls
+                got <- mapM kindOf ts
+                case length wanted == length got of
+                    True -> zipWithM (unifyKind sp) wanted got >> return CKConstraint
+                    False -> throwError $ TypeCheckerError sp $ TCClassArity i (fromIntegral (length wanted)) (fromIntegral (length got))
+    kindOf (Equal sp a b) = do
+        ka <- kindOf a
+        kb <- kindOf b
+        unifyKind sp ka kb >> return CKConstraint
+    kindOf (Quintessable sp a b) = do
+        ka <- kindOf a
+        kb <- kindOf b
+        unifyKind sp ka kb >> return CKConstraint
 
     defaultKind (Pred sp i t) = Pred sp i <$> mapM defaultKind t
     defaultKind (Equal sp a b) = Equal sp <$> defaultKind a <*> defaultKind b
