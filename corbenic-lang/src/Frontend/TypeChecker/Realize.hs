@@ -90,7 +90,7 @@ resolveTypeName sp ident = do
     case tv of
         Just tv' -> return $ CTVar tv'
         Nothing -> do
-            case M.lookup ident primitiveSeed of
+            case M.lookup ident primitiveTypeSeed of
                 Just pt -> return $ CTPrim sp pt
                 Nothing -> do
                     con <- M.lookup ident <$> askFor tcTyCons

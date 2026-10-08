@@ -25,6 +25,7 @@ data TypeCheckerErrorKind
     | TCClassArity Identifier Natural Natural
     | TCBadDoBlockEnding
     | TCKindMismatch CorbenicKind CorbenicKind
+    | TCDeclaredPrimitive Text
     | TCBug Text
     | TCNYI Text
     deriving (Eq, Ord, Show)
@@ -46,6 +47,7 @@ instance Pretty TypeCheckerErrorKind where
     prettyPrint (TCClassArity ident expected got) = "Class " <> prettyPrint ident <> " should have " <> show expected <> (if expected == 1 then " argument" else " arguments") <> " but got " <> show got
     prettyPrint TCBadDoBlockEnding = "🝣 block must end with an expression"
     prettyPrint (TCKindMismatch k1 k2) = "Could not match kind " <> prettyPrint k1 <> " " <> prettyPrint k2
+    prettyPrint (TCDeclaredPrimitive t) = "Primitives cannot be user-defined: " <> prettyPrint (IdentPrimitive t)
     prettyPrint (TCBug txt) = "Type checker bug (file a bug report at https://github.com/Bazinga9000/corbenic): " <> txt
     prettyPrint (TCNYI txt) = txt <> " are not yet implemented. Sorry!"
 

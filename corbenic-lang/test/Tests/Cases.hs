@@ -31,6 +31,7 @@ data TcErrorShape
     | TcInfiniteKind
     | TcIllegalTypeApp
     | TcKindMismatch
+    | TcDeclaredPrimitive Text
     | TcMissingInstance
     | TcAmbiguousType
     | TcAmbiguousTypeVar
@@ -52,6 +53,7 @@ tcErrorShape (TCInfiniteType _ _) = TcInfiniteType
 tcErrorShape (TCInfiniteKind _ _) = TcInfiniteKind
 tcErrorShape (TCIllegalTypeApp _) = TcIllegalTypeApp
 tcErrorShape (TCKindMismatch _ _) = TcKindMismatch
+tcErrorShape (TCDeclaredPrimitive t) = TcDeclaredPrimitive t
 tcErrorShape (TCMissingInstance _) = TcMissingInstance
 tcErrorShape (TCAmbiguousType _) = TcAmbiguousType
 tcErrorShape (TCAmbiguousTypeVar _ _) = TcAmbiguousTypeVar
@@ -208,6 +210,7 @@ typeCheckErrTests =
         , testCase "kind_mismatch" $ runCase (TypeCheckE TcKindMismatch) (decodeUtf8 $(embedFileRelative "test/Cases/typecheckerr/kind_mismatch.corb"))
         , testCase "infinite_kind" $ runCase (TypeCheckE TcInfiniteKind) (decodeUtf8 $(embedFileRelative "test/Cases/typecheckerr/infinite_kind.corb"))
         , testCase "type_app_kind_mismatch" $ runCase (TypeCheckE TcKindMismatch) (decodeUtf8 $(embedFileRelative "test/Cases/typecheckerr/type_app_kind_mismatch.corb"))
+        , testCase "declared_primitive" $ runCase (TypeCheckE (TcDeclaredPrimitive ":")) (decodeUtf8 $(embedFileRelative "test/Cases/typecheckerr/declared_primitive.corb"))
         ]
 
 -- cases that should typecheck (with no implicit prelude)
@@ -242,6 +245,7 @@ typeCheckTests =
         , testCase "type_lambda_apply" $ runCase TypeChecks (decodeUtf8 $(embedFileRelative "test/Cases/typechecks/type_lambda_apply.corb"))
         , testCase "higher_kinded_signature" $ runCase TypeChecks (decodeUtf8 $(embedFileRelative "test/Cases/typechecks/higher_kinded_signature.corb"))
         , testCase "higher_kinded_signature_multi" $ runCase TypeChecks (decodeUtf8 $(embedFileRelative "test/Cases/typechecks/higher_kinded_signature_multi.corb"))
+        , testCase "primitive" $ runCase TypeChecks (decodeUtf8 $(embedFileRelative "test/Cases/typechecks/primitive.corb"))
         ]
 
 caseTests :: TestTree

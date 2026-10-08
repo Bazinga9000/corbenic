@@ -43,6 +43,11 @@ checkDupes = go mempty
         | S.member name seen = throwError $ TypeCheckerError (spanOf td) $ TCDuplicateDeclaration name
         | otherwise = go (S.insert name seen) hs
 
+checkNoPrimitives :: [TermHeader] -> Tc ()
+checkNoPrimitives = mapM_ $ \TermHeader{thName = name, thDecl = td} -> case name of
+    IdentPrimitive prim -> throwError $ TypeCheckerError (spanOf td) $ TCDeclaredPrimitive prim
+    _ -> pass
+
 checkTerms :: [TermHeader] -> Tc [MaybeExported SurfaceDeclaration (Span, CorbenicType)]
 checkTerms termHeaders = do
     let binds = [(thName h, stydType <$> thSig h, stdBody $ thDecl h) | h <- termHeaders]
@@ -62,6 +67,7 @@ checkModule :: SurfaceModule Span -> Tc (SurfaceModule (Span, CorbenicType))
 checkModule modl = do
     let termHeaders = collectTermHeaders . smDecls $ modl
     checkDupes termHeaders
+    checkNoPrimitives termHeaders
     decls' <- checkTerms termHeaders
     return modl { smDecls = decls' }
 

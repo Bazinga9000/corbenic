@@ -16,6 +16,7 @@ import Syntax.Identifier
 import Syntax.Literal
 import Syntax.Location
 import Syntax.Surface
+import Frontend.TypeChecker.Seed (primitiveTermSeed)
 
 -- things that can be instantiated. that is, generally freshening universal qualifiers and
 -- creating a monotyped thing
@@ -105,6 +106,9 @@ infer e = inferPoly e >>= instantiate
 -- infer the *polymorphic* type of an expression.
 inferPoly :: SurfaceExpr Span -> Tc (SurfaceExpr (Span, CorbenicType))
 inferPoly (SELiteral l) = inferLiteral l
+inferPoly (SEIdentifier (Annotated sp (IdentPrimitive prim))) = case M.lookup prim primitiveTermSeed of
+        Just scmBuilder -> scmBuilder sp >>= \scm -> return $ SEIdentifier (Annotated (sp, schemeToType scm) (IdentPrimitive prim))
+        Nothing -> throwError $ TypeCheckerError sp (TCUnboundIdentifier (IdentPrimitive prim))
 inferPoly (SEIdentifier (Annotated sp ident)) = do
     rho <- askFor tcTerms
     case M.lookup ident rho of
@@ -283,17 +287,6 @@ check (SEAnnotation ann e sty) t = do
     unify t ty
     return $ SEAnnotation (ann, ty) e' sty
 check (SEHole sp) t = return $ SEHole (sp, t)
-
--- check a term declaration with an optional signature
-checkTermDecl :: Maybe (SurfaceTypeDecl Span) -> SurfaceTermDecl Span -> Tc (Scheme, SurfaceTermDecl (Span, CorbenicType))
-checkTermDecl mSig d@(SurfaceTermDecl sp _ (Annotated spi ident) body) = do
-    (scm, body') <- case mSig of
-        Nothing -> do
-            body' <- infer body
-            scm <- generalize $ exprType body'
-            return (scm, body')
-        Just sig -> checkAgainstSignature (stydType sig) body
-    return (scm, d{stdBody = body', stdAnn = (sp, exprType body'), stdName = Annotated (spi, exprType body') ident})
 
 checkAgainstSignature :: SurfaceType Span -> SurfaceExpr Span -> Tc (Scheme, SurfaceExpr (Span, CorbenicType))
 checkAgainstSignature sig body = do
