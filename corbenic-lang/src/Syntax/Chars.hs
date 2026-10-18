@@ -42,7 +42,6 @@ reservedTokens =
         , ('λ', TokLambda)
         , ('Λ', TokTypeLambda)
         , ('↦', TokMapsTo)
-        , ('🝡', TokCase)
         , ('🝣', TokDo)
         , ('↤', TokDoMonadic)
         , ('※', TokNoExport)
@@ -57,6 +56,9 @@ reservedTokens =
 -- handled specifically by the lexer
 charComment :: Char
 charComment = '⍝'
+
+charCase :: Char
+charCase = '🝡'
 
 charQuote :: Char
 charQuote = '\''

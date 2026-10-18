@@ -173,9 +173,11 @@ parseSimpleOperand =
     parseSELiteral
         <|> parseSEIdentifier
         <|> try parseSELambda
+        <|> try parseSELambdaCaseEmpty
         <|> parseSELambdaCase
         <|> parseSETypeLambda
         <|> parseSEDo
+        <|> parseSECaseEmpty
         <|> parseSECase
         <|> parseSEList
         <|> try parseSETuple
@@ -269,6 +271,12 @@ parseSECase = do
     (openSpan, closeSpan, patterns) <- block $ many (parseSurfaceBranch <* newline)
     return $ SECase (combine4 caseTok scrutinee openSpan closeSpan) scrutinee patterns
 
+parseSECaseEmpty :: Parser (SurfaceExpr Span)
+parseSECaseEmpty = do
+    caseTok <- tok TokEmptyCase
+    scrutinee <- parseSurfaceExpr
+    return $ SECase (combine caseTok scrutinee) scrutinee []
+
 -- a pattern match automatically wrapped in a lambda
 parseSELambdaCase :: Parser (SurfaceExpr Span)
 parseSELambdaCase = do
@@ -276,6 +284,12 @@ parseSELambdaCase = do
     caseTok <- tok TokCase
     (openSpan, closeSpan, patterns) <- block $ many (parseSurfaceBranch <* newline)
     return $ SELambdaCase (combine4 lambdaTok caseTok openSpan closeSpan) patterns
+
+parseSELambdaCaseEmpty :: Parser (SurfaceExpr Span)
+parseSELambdaCaseEmpty = do
+    lambdaTok <- tok TokLambda
+    caseTok <- tok TokEmptyCase
+    return $ SELambdaCase (combine lambdaTok caseTok) []
 
 -- a list literal
 parseSEList :: Parser (SurfaceExpr Span)

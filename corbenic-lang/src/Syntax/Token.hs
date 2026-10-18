@@ -51,6 +51,7 @@ data Token
     | TokTypeLambda
     | TokMapsTo
     | TokCase
+    | TokEmptyCase
     | TokDo
     | TokDoMonadic
     | TokNoExport
@@ -100,6 +101,7 @@ instance Pretty Token where
     prettyPrint TokTypeLambda = "Λ"
     prettyPrint TokMapsTo = "↦"
     prettyPrint TokCase = "🝡"
+    prettyPrint TokEmptyCase = "🝡₀"
     prettyPrint TokDo = "🝣"
     prettyPrint TokDoMonadic = "↤"
     prettyPrint TokNoExport = "※"

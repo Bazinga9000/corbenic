@@ -47,6 +47,12 @@ lexOne = do
                 case Map.lookup c reservedTokens of
                     Just t -> consume >> pure (Just t)
                     Nothing -> throwAt start (LexUnexpected c)
+            | c == charCase -> do
+                _ <- consume
+                nx <- peek
+                case nx of
+                    Just '₀' -> consume >> pure (Just TokEmptyCase)
+                    _ -> pure (Just TokCase)
             | Just cls <- identifierClass c
             , isUpperOf cls c -> do
                 _ <- consume

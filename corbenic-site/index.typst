@@ -140,6 +140,13 @@ Corbenic also supports using seqeuence `λ🝡` to represent a lambda expression
   n ↦ n * «factorial» (n ∸ 1)
 ```
 
+If you need a case block with *no* branches (which almost certainly means you are working with the empty type `𝟘`), append a subscript `₀` to the case block or lambda-case block:
+
+```
+⦻ ⠛ ∀a. 𝟘 → a
+⦻ ≔ λ🝡₀
+```
+
 == Do Notation - `🝣` Blocks
 
 Like Haskell, Corbenic has a form of do notation as syntactic sugar for monadic computations:
