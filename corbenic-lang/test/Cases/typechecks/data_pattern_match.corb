@@ -1,0 +1,5 @@
+▣ Foo
+Box a ≗ MkBox a
+f ⠛ ∀a. Box a → 𝔹
+f ≔ 🝡MkBox 1
+  MkBox _ ↦ True

@@ -1,0 +1,3 @@
+▣ Foo
+Box a ≗ MkBox a
+f ≔ «MkBox» 1

@@ -1,0 +1,6 @@
+▣ Foo
+Either a b ≗ Left a ¦ Right b
+«isLeft» ⠛ ∀a b. Either a b → 𝔹
+«isLeft» ≔ λx ↦ 🝡x
+  Left _ ↦ True
+  Right _ ↦ False

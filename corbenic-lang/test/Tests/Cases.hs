@@ -211,6 +211,9 @@ typeCheckErrTests =
         , testCase "infinite_kind" $ runCase (TypeCheckE TcInfiniteKind) (decodeUtf8 $(embedFileRelative "test/Cases/typecheckerr/infinite_kind.corb"))
         , testCase "type_app_kind_mismatch" $ runCase (TypeCheckE TcKindMismatch) (decodeUtf8 $(embedFileRelative "test/Cases/typecheckerr/type_app_kind_mismatch.corb"))
         , testCase "declared_primitive" $ runCase (TypeCheckE (TcDeclaredPrimitive ":")) (decodeUtf8 $(embedFileRelative "test/Cases/typecheckerr/declared_primitive.corb"))
+        , testCase "duplicate_constructor" $ runCase (TypeCheckE (TcDuplicateDeclaration (IdentRaw "C"))) (decodeUtf8 $(embedFileRelative "test/Cases/typecheckerr/duplicate_constructor.corb"))
+        , testCase "duplicate_parameter" $ runCase (TypeCheckE (TcDuplicateDeclaration (IdentRaw "a"))) (decodeUtf8 $(embedFileRelative "test/Cases/typecheckerr/duplicate_parameter.corb"))
+        , testCase "unbound_field_type" $ runCase (TypeCheckE (TcUnboundTypeConstructor (IdentRaw "Nope"))) (decodeUtf8 $(embedFileRelative "test/Cases/typecheckerr/unbound_field_type.corb"))
         ]
 
 -- cases that should typecheck (with no implicit prelude)
@@ -246,6 +249,15 @@ typeCheckTests =
         , testCase "higher_kinded_signature" $ runCase TypeChecks (decodeUtf8 $(embedFileRelative "test/Cases/typechecks/higher_kinded_signature.corb"))
         , testCase "higher_kinded_signature_multi" $ runCase TypeChecks (decodeUtf8 $(embedFileRelative "test/Cases/typechecks/higher_kinded_signature_multi.corb"))
         , testCase "primitive" $ runCase TypeChecks (decodeUtf8 $(embedFileRelative "test/Cases/typechecks/primitive.corb"))
+        , testCase "data_unit" $ runCase TypeChecks (decodeUtf8 $(embedFileRelative "test/Cases/typechecks/data_unit.corb"))
+        , testCase "data_box" $ runCase TypeChecks (decodeUtf8 $(embedFileRelative "test/Cases/typechecks/data_box.corb"))
+        , testCase "data_pair" $ runCase TypeChecks (decodeUtf8 $(embedFileRelative "test/Cases/typechecks/data_pair.corb"))
+        , testCase "data_rose" $ runCase TypeChecks (decodeUtf8 $(embedFileRelative "test/Cases/typechecks/data_rose.corb"))
+        , testCase "newtype" $ runCase TypeChecks (decodeUtf8 $(embedFileRelative "test/Cases/typechecks/newtype.corb"))
+        , testCase "data_empty" $ runCase TypeChecks (decodeUtf8 $(embedFileRelative "test/Cases/typechecks/data_empty.corb"))
+        , testCase "data_use_constructor" $ runCase TypeChecks (decodeUtf8 $(embedFileRelative "test/Cases/typechecks/data_use_constructor.corb"))
+        , testCase "data_pattern_match" $ runCase TypeChecks (decodeUtf8 $(embedFileRelative "test/Cases/typechecks/data_pattern_match.corb"))
+        , testCase "data_either_isleft" $ runCase TypeChecks (decodeUtf8 $(embedFileRelative "test/Cases/typechecks/data_either_isleft.corb"))
         ]
 
 caseTests :: TestTree

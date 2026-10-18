@@ -2,10 +2,13 @@ module Frontend.TypeChecker where
 
 import Control.Monad.Except
 import Control.Monad.RWS hiding (pass)
+import Control.Lens
 import Data.Set qualified as S
+import Data.Map qualified as M
 import Frontend.Flags
 import Frontend.TypeChecker.Error
 import Frontend.TypeChecker.Infer
+import Frontend.TypeChecker.Realize
 import Frontend.TypeChecker.Tc
 import Frontend.TypeChecker.Types
 import Syntax.Identifier
@@ -15,6 +18,76 @@ import Syntax.Surface
 -- the core type checker is divided into several strata, so that we can collectively gain
 -- more information and handle mutual recursion properly
 
+-- strata 2: data headers
+data DataHeader = DataHeader
+    { dhVis    :: Visibility
+    , dhName   :: Annotated Span Identifier
+    , dhParams :: [Annotated Span Identifier]
+    , dhCtors  :: [MaybeExported SurfaceTypeConstructor Span]
+    , dhIsNewtype :: Bool
+    }
+
+instance HasSpan DataHeader where
+    spanOf = spanOf . dhName
+instance Named DataHeader where
+    getName = getName . dhName
+
+
+collectDataHeaders :: [MaybeExported SurfaceDeclaration Span] -> [DataHeader]
+collectDataHeaders = catMaybes . map collect
+  where
+    collect (Exported sp (SDData sdd)) = Just $ headerD (Visible sp) sdd
+    collect (Hidden sp (SDData sdd)) = Just $ headerD (Invisible sp) sdd
+    collect (Exported sp (SDNewtype sntd)) = Just $ headerNT (Visible sp) sntd
+    collect (Hidden sp (SDNewtype sntd)) = Just $ headerNT (Invisible sp) sntd
+    collect _ = Nothing
+
+    headerD vis (SurfaceDataDecl _ _ name params ctors) =
+        DataHeader{dhVis = vis, dhName = name, dhParams = params, dhCtors = ctors, dhIsNewtype = False}
+    headerNT vis (SurfaceNewtypeDecl _ _ name params ctor) =
+        DataHeader{dhVis = vis, dhName = name, dhParams = params, dhCtors = one ctor, dhIsNewtype = True}
+
+-- for each data type declaration, infer a fresh kind variable for each of its parameters
+-- and assemble the final kind of the type with those variables
+makeDataType :: DataHeader -> Tc (Identifier, CorbenicKind, [(Identifier, TypeVar)])
+makeDataType h = do
+    checkDupes $ dhParams h
+    checkDupes $ dhCtors h
+    ps <- forM (dhParams h) $ \case
+        (Annotated sp ident) -> do
+            tv <- freshKind >>= freshMetavarTV sp
+            return (ident, tv)
+    let k = foldr CKArr CKStar (map (tvKind . snd) ps)
+    return $ (annVal (dhName h), k, ps)
+
+-- given the fresh tvars of the type's parameters, infer a type for a specific constructor
+makeCtor :: DataHeader -> [(Identifier, TypeVar)] -> SurfaceTypeConstructor Span -> Tc (Identifier, Scheme)
+makeCtor h ps (SurfaceTypeConstructor _ _ (Annotated sp cn) fields) = do
+    fieldTypes <- mapM realize fields
+    let resultType = foldl' applyOne ctorType (map snd ps) where
+        ctorType = CTCon sp (annVal (dhName h))
+        applyOne t tv = CTApp sp t (CTVar tv)
+    let body = foldr (mkFun sp) resultType fieldTypes
+    return (annVal (Annotated sp cn), Scheme (map snd ps) [] body)
+
+checkData :: [DataHeader] -> Tc a -> Tc a
+checkData hds cont = do
+    outs <- mapM makeDataType hds
+
+    -- machinery for getting the relevant param variables
+    let paramVars = M.fromList $ map (\(a,b,c) -> (a,(b,c))) outs
+    let getParamVars dh = fromMaybe [] $ snd <$> M.lookup (annVal (dhName dh)) paramVars
+    let getParamVarsAsMap = M.fromList . getParamVars
+    let withParamVars dh = over tcTypeVars (M.union (getParamVarsAsMap dh))
+
+    let kMap = map (\(ident, k, _) -> (ident, k)) outs
+    local (over tcTyCons (M.union (fromList kMap))) $ do
+        let mkOne dh = local (withParamVars dh) $
+                mapM (\ctor -> makeCtor dh (getParamVars dh) (unMaybeExported ctor)) (dhCtors dh)
+        ctorTerms <- join <$> mapM mkOne hds
+        local (over tcTerms (M.union (fromList ctorTerms))) cont
+
+
 -- strata 1: term headers
 data TermHeader = TermHeader
     { thVis :: Visibility
@@ -22,6 +95,11 @@ data TermHeader = TermHeader
     , thSig :: Maybe (SurfaceTypeDecl Span)
     , thDecl :: SurfaceTermDecl Span
     }
+
+instance HasSpan TermHeader where
+    spanOf = spanOf . thDecl
+instance Named TermHeader where
+    getName = thName
 
 data Visibility = Visible Span | Invisible Span
 
@@ -35,17 +113,17 @@ collectTermHeaders = catMaybes . map collect
     header vis mSig td@(SurfaceTermDecl _ _ (Annotated _ name) _) =
         TermHeader{thVis = vis, thName = name, thSig = mSig, thDecl = td}
 
-checkDupes :: [TermHeader] -> Tc ()
+checkDupes :: (HasSpan a, Named a) => [a] -> Tc ()
 checkDupes = go mempty
   where
     go _ [] = pass
-    go seen (TermHeader _ name _ td : hs)
-        | S.member name seen = throwError $ TypeCheckerError (spanOf td) $ TCDuplicateDeclaration name
-        | otherwise = go (S.insert name seen) hs
+    go seen (h : hs)
+        | S.member (getName h) seen = throwError $ TypeCheckerError (spanOf h) $ TCDuplicateDeclaration (getName h)
+        | otherwise = go (S.insert (getName h) seen) hs
 
-checkNoPrimitives :: [TermHeader] -> Tc ()
-checkNoPrimitives = mapM_ $ \TermHeader{thName = name, thDecl = td} -> case name of
-    IdentPrimitive prim -> throwError $ TypeCheckerError (spanOf td) $ TCDeclaredPrimitive prim
+checkNoPrimitives :: (HasSpan a, Named a) => [a] -> Tc ()
+checkNoPrimitives = mapM_ $ \x -> case getName x of
+    IdentPrimitive prim -> throwError $ TypeCheckerError (spanOf x) $ TCDeclaredPrimitive prim
     _ -> pass
 
 checkTerms :: [TermHeader] -> Tc [MaybeExported SurfaceDeclaration (Span, CorbenicType)]
@@ -66,9 +144,11 @@ checkTerms termHeaders = do
 checkModule :: SurfaceModule Span -> Tc (SurfaceModule (Span, CorbenicType))
 checkModule modl = do
     let termHeaders = collectTermHeaders . smDecls $ modl
-    checkDupes termHeaders
-    checkNoPrimitives termHeaders
-    decls' <- checkTerms termHeaders
+    let dataHeaders = collectDataHeaders . smDecls $ modl
+    let allHeaders = map SomeLocatedName termHeaders <> map SomeLocatedName dataHeaders
+    checkDupes allHeaders
+    checkNoPrimitives allHeaders
+    decls' <- checkData dataHeaders $ checkTerms termHeaders
     return modl { smDecls = decls' }
 
 
