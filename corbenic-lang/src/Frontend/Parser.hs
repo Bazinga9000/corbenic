@@ -509,6 +509,7 @@ parseSurfaceDataDecl = do
     params <- many parseIdentifier
     declarator <- tok TokData
     ctors <- parseDataConstructors
+    void (optional newline)
     let totalSpan = combineAll $ spanOf name :| fmap spanOf params <> [spanOf declarator]
     return $ SurfaceDataDecl totalSpan dc name params ctors
   where
@@ -532,6 +533,7 @@ parseSurfaceNewtypeDecl = do
     params <- many parseIdentifier
     declarator <- tok TokNewtype
     ctor <- maybeExported parseSurfaceTypeConstructor
+    void (optional newline)
     let totalSpan = combineAll $ spanOf name :| fmap spanOf params <> [spanOf declarator]
     return $ SurfaceNewtypeDecl totalSpan dc name params ctor
 
@@ -542,6 +544,7 @@ parseSurfaceTypeAlias = do
     params <- many parseIdentifier
     declarator <- tok TokTypeAlias
     ty <- parseSurfaceType
+    void (optional newline)
     return $ SurfaceTypeAlias (combine3 name declarator ty) dc name params ty
 
 parseSurfaceConstraintAlias :: Parser (SurfaceConstraintAlias Span)
@@ -550,6 +553,7 @@ parseSurfaceConstraintAlias = do
     cstHead <- parseSurfaceClassApp
     declarator <- tok TokConstraintAlias
     cstBody <- parseSurfaceClassContext
+    void (optional newline)
     return $ SurfaceConstraintAlias (combine3 cstHead declarator cstBody) dc cstHead cstBody
 
 parseSurfaceAssociatedType :: Parser (SurfaceAssociatedType Span)
