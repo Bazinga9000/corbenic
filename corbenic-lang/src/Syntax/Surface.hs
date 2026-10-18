@@ -3,7 +3,7 @@ module Syntax.Surface where
 import Control.Lens (Lens', lens)
 import Syntax.Documentation
 import Syntax.Fixity
-import Syntax.Identifier (Identifier)
+import Syntax.Identifier (Identifier, Named, getName)
 import Syntax.Literal
 import Syntax.Location
 
@@ -19,6 +19,10 @@ data SurfaceModule ann = SurfaceModule
 data MaybeExported thing ann
     = Exported Span (thing ann)
     | Hidden Span (thing ann)
+
+unMaybeExported :: MaybeExported thing ann -> thing ann
+unMaybeExported (Exported _ t) = t
+unMaybeExported (Hidden _ t) = t
 
 type ModulePath ann = NonEmpty (Annotated ann Identifier)
 
@@ -347,3 +351,50 @@ instance (HasSpan ann) => HasSpan (SurfaceClassContext ann) where
 instance (HasSpan ann) => HasSpan (SurfaceImport ann) where
     spanOf (SurfaceImport ann _ _ _) = spanOf ann
     spanOf (SurfaceReexport ann _ _) = spanOf ann
+
+instance HasSpan (MaybeExported a b) where
+    spanOf (Exported sp _) = sp
+    spanOf (Hidden sp _) = sp
+
+-- Named instances
+
+instance Named (SurfaceTypeConstructor ann) where
+    getName = getName . stcName
+
+instance Named (SurfaceTermDecl ann) where
+    getName = getName . stdName
+
+instance Named (SurfaceTypeDecl ann) where
+    getName = getName . stydName
+
+instance Named (SurfaceDataDecl ann) where
+    getName = getName . sddName
+
+instance Named (SurfaceNewtypeDecl ann) where
+    getName = getName . sndName
+
+instance Named (SurfaceTypeAlias ann) where
+    getName = getName . staName
+
+instance Named (SurfaceConstraintAlias ann) where
+    getName = getName . scaHead
+
+instance Named (SurfaceAssociatedType ann) where
+    getName = getName . satName
+
+instance Named (SurfaceClassDecl ann) where
+    getName = getName . scdHead
+
+instance Named (SurfaceClassApp ann) where
+    getName = getName . scappName
+
+instance Named (SurfaceInstanceDecl ann) where
+    getName = getName . sidHead
+
+instance Named (SurfaceInstanceMember ann) where
+    getName (SIMMethod m) = getName m
+    getName (SIMAssociatedType t) = getName t
+
+instance (Named (thing ann)) => Named (MaybeExported thing ann) where
+    getName (Exported _ t) = getName t
+    getName (Hidden _ t) = getName t

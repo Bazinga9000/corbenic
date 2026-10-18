@@ -4,6 +4,7 @@ module Syntax.Location (
     Located,
     Annotated (..),
     HasSpan (..),
+    SomeLocatedName (..),
     combine,
     combine3,
     combine4,
@@ -12,7 +13,7 @@ module Syntax.Location (
     combineAll,
 ) where
 
-import Prelude
+import Syntax.Identifier (Named, getName)
 
 -- | A position in a source file
 data Pos = Pos
@@ -87,3 +88,14 @@ combineAll = sconcat . fmap spanOf
 
 instance (Pretty a) => Pretty (Annotated ann a) where
     prettyPrint (Annotated _ a) = prettyPrint a
+
+instance (Named a) => Named (Annotated b a) where
+    getName = getName . annVal
+
+data SomeLocatedName = forall a. (Named a, HasSpan a) => SomeLocatedName a
+
+instance Named SomeLocatedName where
+    getName (SomeLocatedName a) = getName a
+
+instance HasSpan SomeLocatedName where
+    spanOf (SomeLocatedName a) = spanOf a

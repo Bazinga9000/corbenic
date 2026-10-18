@@ -38,3 +38,11 @@ instance Pretty Identifier where
     prettyPrint (IdentQuoted t) = "«" <> t <> "»"
     prettyPrint (IdentPrimitive t) = "﴾" <> t <> "﴿"
     prettyPrint (IdentGenerated n) = "﴾g#" <> show n <> "﴿"
+
+class Named a where
+    getName :: a -> Identifier
+
+instance Named Identifier where
+    getName = id
+
+data SomeNamed = forall a. (Named a) => SomeNamed a
