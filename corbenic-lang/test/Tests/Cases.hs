@@ -216,6 +216,7 @@ typeCheckErrTests =
         , testCase "unbound_field_type" $ runCase (TypeCheckE (TcUnboundTypeConstructor (IdentRaw "Nope"))) (decodeUtf8 $(embedFileRelative "test/Cases/typecheckerr/unbound_field_type.corb"))
         , testCase "duplicate_constructor_across" $ runCase (TypeCheckE (TcDuplicateDeclaration (IdentRaw "C"))) (decodeUtf8 $(embedFileRelative "test/Cases/typecheckerr/duplicate_constructor_across.corb"))
         , testCase "constructor_shadows_term" $ runCase (TypeCheckE (TcDuplicateDeclaration (IdentRaw "MkA"))) (decodeUtf8 $(embedFileRelative "test/Cases/typecheckerr/constructor_shadows_term.corb"))
+        , testCase "duplicate_alias_parameter" $ runCase (TypeCheckE (TcDuplicateDeclaration (IdentRaw "a"))) (decodeUtf8 $(embedFileRelative "test/Cases/typecheckerr/duplicate_alias_parameter.corb"))
         ]
 
 -- cases that should typecheck (with no implicit prelude)

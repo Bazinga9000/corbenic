@@ -18,7 +18,7 @@ import Syntax.Surface
 -- the core type checker is divided into several strata, so that we can collectively gain
 -- more information and handle mutual recursion properly
 
--- strata 2: data headers
+-- strata 2: data headers and aliases
 data DataHeader = DataHeader
     { dhVis    :: Visibility
     , dhName   :: Annotated Span Identifier
@@ -69,6 +69,35 @@ makeCtor h ps (SurfaceTypeConstructor _ _ (Annotated sp cn) fields) = do
         applyOne t tv = CTApp sp t (CTVar tv)
     let body = foldr (mkFun sp) resultType fieldTypes
     return (annVal (Annotated sp cn), Scheme (map snd ps) [] body)
+
+
+data AliasHeader = AliasHeader
+    { ahVis    :: Visibility
+    , ahName   :: Annotated Span Identifier
+    , ahParams :: [Annotated Span Identifier]
+    , ahBody  :: SurfaceType Span
+    }
+
+instance HasSpan AliasHeader where
+    spanOf = spanOf . ahName
+instance Named AliasHeader where
+    getName = getName . ahName
+
+collectAliasHeaders :: [MaybeExported SurfaceDeclaration Span] -> [AliasHeader]
+collectAliasHeaders = catMaybes . map collect where
+    collect (Exported sp (SDTypeAlias (SurfaceTypeAlias _ _ n p b))) = Just $ AliasHeader (Visible sp) n p b
+    collect (Hidden sp (SDTypeAlias (SurfaceTypeAlias _ _ n p b))) = Just $ AliasHeader (Invisible sp) n p b
+    collect _ = Nothing
+
+registerAlias :: AliasHeader -> Tc (Identifier, ([Located Identifier], SurfaceType Span))
+registerAlias (AliasHeader _ name params body) = do
+    checkDupes params
+    return (annVal name, (params, body))
+
+registerAliases :: [AliasHeader] -> Tc a -> Tc a
+registerAliases as cont = do
+    aliases <- M.fromList <$> mapM registerAlias as
+    local (over tcAliases (M.union aliases)) cont
 
 checkData :: [DataHeader] -> Tc a -> Tc a
 checkData hds cont = do
@@ -145,18 +174,20 @@ checkModule :: SurfaceModule Span -> Tc (SurfaceModule (Span, CorbenicType))
 checkModule modl = do
     let termHeaders = collectTermHeaders . smDecls $ modl
     let dataHeaders = collectDataHeaders . smDecls $ modl
+    let aliasHeaders = collectAliasHeaders . smDecls $ modl
     let ctors = dataHeaders >>= dhCtors
     let terms = map SomeLocatedName termHeaders
     let tynames = map SomeLocatedName dataHeaders
+    let aliases = map SomeLocatedName aliasHeaders
     -- NB: right now, we reject programs like
     -- T ≗ MkT
     -- T ≔ 1
     -- that use the same name for a type and a term (with the notable exception of type punning like T ≗ T due to its pervasiveness)
     -- this might change later as the language gets stronger types
-    checkDupes (terms <> tynames) -- check the type environment for dupes
+    checkDupes (terms <> tynames <> aliases) -- check the type environment for dupes
     checkDupes (terms <> map SomeLocatedName ctors) -- check the term environment for dupes
-    checkNoPrimitives (terms <> tynames <> map SomeLocatedName ctors) -- make sure no primitives are declared
-    decls' <- checkData dataHeaders $ checkTerms termHeaders
+    checkNoPrimitives (terms <> tynames <> map SomeLocatedName ctors <> aliases) -- make sure no primitives are declared
+    decls' <- registerAliases aliasHeaders $ checkData dataHeaders $ checkTerms termHeaders
     return modl { smDecls = decls' }
 
 

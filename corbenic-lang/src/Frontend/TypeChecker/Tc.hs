@@ -11,6 +11,7 @@ import Frontend.TypeChecker.KindSubst
 import Frontend.TypeChecker.Types
 import Syntax.Identifier
 import Syntax.Location
+import Syntax.Surface
 
 -- the type checker monad
 type Tc a = RWST TcEnv TcWriter TcState (Except TypeCheckerError) a
@@ -53,7 +54,7 @@ data TcEnv = TcEnv
     , _tcTyCons :: Map Identifier CorbenicKind -- type constructors in scope
     , _tcClasses :: Map Identifier ClassDef
     , _tcInstances :: Map Identifier [InstanceDef] -- by class name
-    , _tcAliases :: Map Identifier ([TypeVar], CorbenicType) -- type aliases (expanded on use)
+    , _tcAliases :: Map Identifier ([Located Identifier], SurfaceType Span) -- type aliases (expanded on use)
     , _tcConstraintAliases :: Map Identifier ConstraintAlias
     , _tcTypeVars :: Map Identifier TypeVar -- locally bound type variables
     , _flags :: FrontendFlags
