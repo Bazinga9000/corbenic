@@ -214,6 +214,8 @@ typeCheckErrTests =
         , testCase "duplicate_constructor" $ runCase (TypeCheckE (TcDuplicateDeclaration (IdentRaw "C"))) (decodeUtf8 $(embedFileRelative "test/Cases/typecheckerr/duplicate_constructor.corb"))
         , testCase "duplicate_parameter" $ runCase (TypeCheckE (TcDuplicateDeclaration (IdentRaw "a"))) (decodeUtf8 $(embedFileRelative "test/Cases/typecheckerr/duplicate_parameter.corb"))
         , testCase "unbound_field_type" $ runCase (TypeCheckE (TcUnboundTypeConstructor (IdentRaw "Nope"))) (decodeUtf8 $(embedFileRelative "test/Cases/typecheckerr/unbound_field_type.corb"))
+        , testCase "duplicate_constructor_across" $ runCase (TypeCheckE (TcDuplicateDeclaration (IdentRaw "C"))) (decodeUtf8 $(embedFileRelative "test/Cases/typecheckerr/duplicate_constructor_across.corb"))
+        , testCase "constructor_shadows_term" $ runCase (TypeCheckE (TcDuplicateDeclaration (IdentRaw "MkA"))) (decodeUtf8 $(embedFileRelative "test/Cases/typecheckerr/constructor_shadows_term.corb"))
         ]
 
 -- cases that should typecheck (with no implicit prelude)
@@ -258,6 +260,7 @@ typeCheckTests =
         , testCase "data_use_constructor" $ runCase TypeChecks (decodeUtf8 $(embedFileRelative "test/Cases/typechecks/data_use_constructor.corb"))
         , testCase "data_pattern_match" $ runCase TypeChecks (decodeUtf8 $(embedFileRelative "test/Cases/typechecks/data_pattern_match.corb"))
         , testCase "data_either_isleft" $ runCase TypeChecks (decodeUtf8 $(embedFileRelative "test/Cases/typechecks/data_either_isleft.corb"))
+        , testCase "data_ctor_type_punning" $ runCase TypeChecks (decodeUtf8 $(embedFileRelative "test/Cases/typechecks/data_ctor_type_punning.corb"))
         ]
 
 caseTests :: TestTree

@@ -145,9 +145,17 @@ checkModule :: SurfaceModule Span -> Tc (SurfaceModule (Span, CorbenicType))
 checkModule modl = do
     let termHeaders = collectTermHeaders . smDecls $ modl
     let dataHeaders = collectDataHeaders . smDecls $ modl
-    let allHeaders = map SomeLocatedName termHeaders <> map SomeLocatedName dataHeaders
-    checkDupes allHeaders
-    checkNoPrimitives allHeaders
+    let ctors = dataHeaders >>= dhCtors
+    let terms = map SomeLocatedName termHeaders
+    let tynames = map SomeLocatedName dataHeaders
+    -- NB: right now, we reject programs like
+    -- T ≗ MkT
+    -- T ≔ 1
+    -- that use the same name for a type and a term (with the notable exception of type punning like T ≗ T due to its pervasiveness)
+    -- this might change later as the language gets stronger types
+    checkDupes (terms <> tynames) -- check the type environment for dupes
+    checkDupes (terms <> map SomeLocatedName ctors) -- check the term environment for dupes
+    checkNoPrimitives (terms <> tynames <> map SomeLocatedName ctors) -- make sure no primitives are declared
     decls' <- checkData dataHeaders $ checkTerms termHeaders
     return modl { smDecls = decls' }
 
